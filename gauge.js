@@ -7,8 +7,8 @@ const FITZSIMMONS_COEF = 0.0413;
 const MIN_DISCHARGE    = 1.5;   // m³/s — below training range
 
 // Fitzsimmons real-time data from ECCC wateroffice API
-// wateroffice.ec.gc.ca doesn't send CORS headers so we route via allorigins proxy
-const PROXY = 'https://api.allorigins.win/raw?url=';
+// wateroffice.ec.gc.ca doesn't send CORS headers so we route via corsproxy.io
+const PROXY = 'https://corsproxy.io/?url=';
 
 function fitzURL() {
   const now = new Date();
