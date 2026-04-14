@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Callaghan Creek Gauge — BCWhitewater</title>
+  <link rel="stylesheet" href="style.css" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+</head>
+<body>
+  <div id="app">
+    <header>
+      <h1>Callaghan Creek — Estimated Water Level</h1>
+      <p class="subtitle">
+        Calculated from Fitzsimmons Creek EC gauge (08MG026) · 48-hour history ·
+        <a href="https://www.bcwhitewater.org/reaches/callaghan-creek" target="_blank">BCWhitewater reach page</a>
+      </p>
+    </header>
+
+    <div id="error-area"></div>
+
+    <div class="summary-cards">
+      <div class="card fitz">
+        <div class="card-label">Fitzsimmons Creek</div>
+        <div class="card-value" id="fitz-value">—<span class="card-unit">m³/s</span></div>
+        <div class="card-note" id="fitz-time">Loading…</div>
+      </div>
+      <div class="card cal">
+        <div class="card-label">Est. Callaghan Level</div>
+        <div class="card-value" id="cal-value">—<span class="card-unit">m</span></div>
+        <div id="level-badge" class="level-badge level-unknown">—</div>
+      </div>
+      <div class="card time">
+        <div class="card-label">Data Updated</div>
+        <div class="card-value" id="update-time" style="font-size:1rem;padding-top:0.3rem">—</div>
+        <div class="card-note">EC real-time · hourly</div>
+      </div>
+    </div>
+
+    <div class="chart-card">
+      <h2>48-Hour History</h2>
+      <div class="chart-wrap">
+        <canvas id="gauge-chart"></canvas>
+      </div>
+    </div>
+
+    <div class="model-note">
+      <strong>How this works:</strong>
+      The estimated Callaghan Creek water level is calculated from a linear regression model trained on
+      field observations from 2023–2025 (n=118, R²=0.815).
+      Formula: <strong>Callaghan (m) = 0.0181 + 0.0413 × Fitzsimmons discharge (m³/s)</strong>.
+      Valid for Fitzsimmons flows of 1.5–21.2 m³/s.
+      When Ashlu Creek data is also available (via BCWhitewater), a multi-predictor model is used instead (R²=0.754).
+      This is an estimate only — always verify conditions before paddling.
+    </div>
+
+    <footer>
+      <a href="https://www.bcwhitewater.org" target="_blank">BCWhitewater.org</a> ·
+      Gauge data: <a href="https://wateroffice.ec.gc.ca/report/real_time_e.html?stn=08MG026" target="_blank">Environment Canada · 08MG026</a>
+    </footer>
+  </div>
+
+  <script type="module">
+    import { loadData } from './gauge.js';
+
+    // ── Level descriptions (update thresholds once you have field data) ─────
+    function levelInfo(stage) {
+      if (stage === null) return { label: 'Below range', cls: 'level-low' };
+      if (stage < 0.15)  return { label: 'Too low',     cls: 'level-low' };
+      if (stage < 0.25)  return { label: 'Minimum',     cls: 'level-minimum' };
+      if (stage < 0.45)  return { label: 'Good',        cls: 'level-good' };
+      if (stage < 0.60)  return { label: 'High',        cls: 'level-high' };
+      return               { label: 'Very high',         cls: 'level-very-high' };
+    }
+
+    // ── Format helpers ──────────────────────────────────────────────────────
+    function fmtTime(date) {
+      return date.toLocaleString('en-CA', {
+        timeZone: 'America/Vancouver',
+        month: 'short', day: 'numeric',
+        hour: 'numeric', minute: '2-digit',
+        hour12: true
+      });
+    }
+
+    // ── Chart ───────────────────────────────────────────────────────────────
+    let chart;
+
+    function buildChart(labels, fitzData, callaghanData) {
+      const ctx = document.getElementById('gauge-chart').getContext('2d');
+
+      chart = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels,
+          datasets: [
+            {
+              label: 'Fitzsimmons Creek (m³/s)',
+              data: fitzData,
+              borderColor: '#335EEA',
+              backgroundColor: 'rgba(51,94,234,0.08)',
+              borderWidth: 2,
+              pointRadius: 2,
+              pointHoverRadius: 5,
+              tension: 0.3,
+              yAxisID: 'yFitz',
+              fill: true,
+            },
+            {
+              label: 'Est. Callaghan Level (m)',
+              data: callaghanData,
+              borderColor: '#28a745',
+              backgroundColor: 'rgba(40,167,69,0.08)',
+              borderWidth: 2.5,
+              pointRadius: 2,
+              pointHoverRadius: 5,
+              tension: 0.3,
+              yAxisID: 'yCal',
+              fill: true,
+              spanGaps: false,
+            },
+          ],
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          interaction: { mode: 'index', intersect: false },
+          plugins: {
+            legend: {
+              position: 'top',
+              labels: {
+                font: { family: 'Inter', size: 12 },
+                usePointStyle: true,
+                pointStyleWidth: 10,
+              },
+            },
+            tooltip: {
+              backgroundColor: '#fff',
+              borderColor: '#dee2e6',
+              borderWidth: 1,
+              titleColor: '#161C2D',
+              bodyColor: '#506690',
+              titleFont: { family: 'Inter', weight: '600', size: 12 },
+              bodyFont: { family: 'Inter', size: 12 },
+              padding: 10,
+              callbacks: {
+                title(items) {
+                  return fmtTime(new Date(items[0].parsed.x));
+                },
+                label(item) {
+                  const unit = item.datasetIndex === 0 ? ' m³/s' : ' m';
+                  const val  = item.parsed.y;
+                  return val !== null
+                    ? ` ${item.dataset.label.split('(')[0].trim()}: ${val}${unit}`
+                    : ` Callaghan: below range`;
+                },
+              },
+            },
+          },
+          scales: {
+            x: {
+              type: 'time',
+              time: {
+                unit: 'hour',
+                displayFormats: { hour: 'MMM d, ha' },
+                tooltipFormat: 'MMM d, h:mm a',
+              },
+              ticks: {
+                font: { family: 'Inter', size: 11 },
+                color: '#506690',
+                maxTicksLimit: 10,
+              },
+              grid: { color: '#f0f0f0' },
+            },
+            yFitz: {
+              type: 'linear',
+              position: 'left',
+              title: {
+                display: true,
+                text: 'Fitzsimmons discharge (m³/s)',
+                font: { family: 'Inter', size: 11 },
+                color: '#335EEA',
+              },
+              ticks: { font: { family: 'Inter', size: 11 }, color: '#335EEA' },
+              grid: { color: '#f0f0f0' },
+            },
+            yCal: {
+              type: 'linear',
+              position: 'right',
+              title: {
+                display: true,
+                text: 'Est. Callaghan level (m)',
+                font: { family: 'Inter', size: 11 },
+                color: '#28a745',
+              },
+              ticks: { font: { family: 'Inter', size: 11 }, color: '#28a745' },
+              grid: { drawOnChartArea: false },
+            },
+          },
+        },
+      });
+    }
+
+    // ── Bootstrap ───────────────────────────────────────────────────────────
+    async function init() {
+      try {
+        const { labels, fitzData, callaghanData, latest, latestStage } = await loadData();
+
+        // Summary cards
+        if (latest) {
+          document.getElementById('fitz-value').innerHTML =
+            `${latest.discharge.toFixed(2)}<span class="card-unit">m³/s</span>`;
+          document.getElementById('fitz-time').textContent = fmtTime(latest.ts);
+          document.getElementById('update-time').textContent = fmtTime(latest.ts);
+        }
+
+        if (latestStage !== null) {
+          document.getElementById('cal-value').innerHTML =
+            `${latestStage.toFixed(2)}<span class="card-unit">m</span>`;
+        } else {
+          document.getElementById('cal-value').innerHTML =
+            `—<span class="card-unit">m</span>`;
+        }
+
+        const info = levelInfo(latestStage);
+        const badge = document.getElementById('level-badge');
+        badge.textContent = info.label;
+        badge.className = `level-badge ${info.cls}`;
+
+        buildChart(labels, fitzData, callaghanData);
+
+      } catch (err) {
+        document.getElementById('error-area').innerHTML =
+          `<div class="error-msg">Could not load gauge data: ${err.message}. Try refreshing in a moment.</div>`;
+        console.error(err);
+      }
+    }
+
+    init();
+  </script>
+</body>
+</html>

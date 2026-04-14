@@ -1,0 +1,157 @@
+/* ── Fonts ─────────────────────────────────────────────────────────────────── */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+/* ── Reset & base ─────────────────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  font-size: 14px;
+  color: #161C2D;
+  background: #F9FBFD;
+  line-height: 1.5;
+}
+
+#app { max-width: 960px; margin: 0 auto; padding: 1.5rem; }
+
+/* ── Header ───────────────────────────────────────────────────────────────── */
+header {
+  text-align: center;
+  padding: 1.5rem 0 1.25rem;
+  border-bottom: 1px solid #dee2e6;
+  margin-bottom: 1.5rem;
+  background: #fff;
+  border-radius: 8px 8px 0 0;
+  padding: 1.5rem;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+}
+header h1 { font-size: 1.5rem; font-weight: 700; color: #161C2D; margin-bottom: 0.25rem; }
+.subtitle  { color: #506690; font-size: 0.875rem; }
+
+/* ── Summary cards ────────────────────────────────────────────────────────── */
+.summary-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.card {
+  background: #fff;
+  border-radius: 8px;
+  padding: 1rem 1.25rem;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.07);
+  border-top: 3px solid transparent;
+}
+.card.fitz   { border-color: #335EEA; }
+.card.cal    { border-color: #28a745; }
+.card.time   { border-color: #dee2e6; }
+
+.card-label {
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #506690;
+  margin-bottom: 0.4rem;
+}
+.card-value {
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: #161C2D;
+  line-height: 1.1;
+}
+.card-unit {
+  font-size: 0.78rem;
+  color: #506690;
+  font-weight: 400;
+  margin-left: 2px;
+}
+.card-note {
+  font-size: 0.72rem;
+  color: #506690;
+  margin-top: 0.3rem;
+}
+
+/* ── Level indicator ──────────────────────────────────────────────────────── */
+.level-badge {
+  display: inline-block;
+  padding: 0.2em 0.65em;
+  border-radius: 4px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  margin-top: 0.35rem;
+}
+.level-low        { background: #e9ecef; color: #495057; }
+.level-minimum    { background: #ffc107; color: #212529; }
+.level-good       { background: #28a745; color: #fff; }
+.level-high       { background: #fd7e14; color: #fff; }
+.level-very-high  { background: #dc3545; color: #fff; }
+.level-unknown    { background: #e9ecef; color: #506690; }
+
+/* ── Chart container ──────────────────────────────────────────────────────── */
+.chart-card {
+  background: #fff;
+  border-radius: 8px;
+  padding: 1.25rem 1.25rem 1rem;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.07);
+  margin-bottom: 1.5rem;
+}
+.chart-card h2 {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #506690;
+  margin-bottom: 1rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.chart-wrap { position: relative; height: 320px; }
+
+/* ── Model note ───────────────────────────────────────────────────────────── */
+.model-note {
+  background: #fff;
+  border-radius: 8px;
+  padding: 1rem 1.25rem;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.07);
+  margin-bottom: 1.5rem;
+  font-size: 0.82rem;
+  color: #506690;
+  line-height: 1.7;
+}
+.model-note strong { color: #161C2D; }
+
+/* ── Loading / error ──────────────────────────────────────────────────────── */
+.status-msg {
+  text-align: center;
+  padding: 3rem 1rem;
+  color: #506690;
+  font-size: 0.9rem;
+}
+.error-msg {
+  background: #f8d7da;
+  color: #842029;
+  border: 1px solid #f5c2c7;
+  border-radius: 6px;
+  padding: 0.75rem 1rem;
+  margin-bottom: 1rem;
+  font-size: 0.85rem;
+}
+
+/* ── Footer ───────────────────────────────────────────────────────────────── */
+footer {
+  text-align: center;
+  font-size: 0.75rem;
+  color: #506690;
+  padding: 1rem 0 0.5rem;
+  line-height: 1.8;
+}
+footer a { color: #335EEA; text-decoration: none; }
+footer a:hover { text-decoration: underline; }
+
+/* ── Responsive ───────────────────────────────────────────────────────────── */
+@media (max-width: 600px) {
+  #app { padding: 1rem; }
+  .chart-wrap { height: 240px; }
+  header h1 { font-size: 1.2rem; }
+  .card-value { font-size: 1.4rem; }
+}
