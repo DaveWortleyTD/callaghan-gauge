@@ -20,32 +20,39 @@ function fitzURL() {
 // ── Fetch helpers ─────────────────────────────────────────────────────────────
 
 async function fetchCSV(url) {
-  const response = await fetch(PROXY + encodeURIComponent(url));
+  const proxyURL = PROXY + encodeURIComponent(url);
+  console.log('[gauge] fetching:', proxyURL);
+  const response = await fetch(proxyURL);
   if (!response.ok) throw new Error(`Fetch failed: ${response.status}`);
-  return response.text();
+  const text = await response.text();
+  console.log('[gauge] raw response (first 500 chars):', text.slice(0, 500));
+  return text;
 }
 
 // Parse the ECCC wateroffice inline CSV.
 // Columns: ID, Date, Parameter/Paramètre, Value/Valeur, ...
 // Parameter 47 = discharge (m³/s)
 function parseECCSV(csv) {
-  const lines = csv.split('\n').slice(1); // skip header
+  const lines = csv.split('\n');
+  console.log('[gauge] CSV header:', lines[0]);
+  console.log('[gauge] CSV row 1:', lines[1]);
+  const dataLines = lines.slice(1);
   const points = [];
 
-  for (const line of lines) {
+  for (const line of dataLines) {
     if (!line.trim()) continue;
     const cols = line.split(',');
-    const dateStr   = cols[1]?.trim();
-    const discharge = parseFloat(cols[3]);
+    const dateStr   = cols[1]?.trim().replace(/"/g, '');
+    const discharge = parseFloat(cols[3]?.replace(/"/g, ''));
     if (!dateStr || isNaN(discharge)) continue;
 
-    // Date format: "2026-04-13T00:00:00Z"
     const ts = new Date(dateStr);
     if (isNaN(ts.getTime())) continue;
 
     points.push({ ts, discharge });
   }
 
+  console.log('[gauge] parsed points:', points.length, points[0]);
   return points.sort((a, b) => a.ts - b.ts);
 }
 
