@@ -7,23 +7,15 @@ const FITZSIMMONS_COEF = 0.0413;
 const MIN_DISCHARGE    = 1.5;   // m³/s — below training range
 
 // Fitzsimmons hourly CSV from ECCC Datamart
+// dd.weather.gc.ca doesn't send CORS headers so we always route via proxy
 const FITZ_CSV_URL = 'https://dd.weather.gc.ca/hydrometric/csv/BC/hourly/BC_08MG026_hourly_hydrometric.csv';
-
-// CORS proxy fallback (used automatically if direct fetch fails)
 const PROXY = 'https://corsproxy.io/?url=';
 
 // ── Fetch helpers ─────────────────────────────────────────────────────────────
 
 async function fetchCSV(url) {
-  let response;
-  try {
-    response = await fetch(url);
-    if (!response.ok) throw new Error(response.status);
-  } catch (_) {
-    // retry via CORS proxy
-    response = await fetch(PROXY + encodeURIComponent(url));
-    if (!response.ok) throw new Error('Failed to fetch: ' + url);
-  }
+  const response = await fetch(PROXY + encodeURIComponent(url));
+  if (!response.ok) throw new Error(`Fetch failed: ${response.status}`);
   return response.text();
 }
 
