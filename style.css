@@ -84,6 +84,7 @@ header h1 { font-size: 1.5rem; font-weight: 700; color: #161C2D; margin-bottom: 
 }
 .level-low        { background: #e9ecef; color: #495057; }
 .level-minimum    { background: #ffc107; color: #212529; }
+.level-nice-low   { background: #20c997; color: #fff; }
 .level-good       { background: #28a745; color: #fff; }
 .level-high       { background: #fd7e14; color: #fff; }
 .level-very-high  { background: #dc3545; color: #fff; }

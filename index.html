@@ -51,7 +51,7 @@
       field observations from 2023–2025 (n=118, R²=0.815).
       Formula: <strong>Callaghan (m) = 0.0181 + 0.0413 × Fitzsimmons discharge (m³/s)</strong>.
       Valid for Fitzsimmons flows of 1.5–21.2 m³/s.
-      When Ashlu Creek data is also available (via BCWhitewater), a multi-predictor model is used instead (R²=0.754).
+      Levels: &lt;0.1m too low · 0.1m minimum · 0.2m nice low · 0.3–0.4m prime · 0.4–0.5m advanced · 0.5m+ Kemble level.
       This is an estimate only — always verify conditions before paddling.
     </div>
 
@@ -66,12 +66,13 @@
 
     // ── Level descriptions (update thresholds once you have field data) ─────
     function levelInfo(stage) {
-      if (stage === null) return { label: 'Below range', cls: 'level-low' };
-      if (stage < 0.15)  return { label: 'Too low',     cls: 'level-low' };
-      if (stage < 0.25)  return { label: 'Minimum',     cls: 'level-minimum' };
-      if (stage < 0.45)  return { label: 'Good',        cls: 'level-good' };
-      if (stage < 0.60)  return { label: 'High',        cls: 'level-high' };
-      return               { label: 'Very high',         cls: 'level-very-high' };
+      if (stage === null) return { label: 'Below range',   cls: 'level-low' };
+      if (stage < 0.1)   return { label: 'Too low',        cls: 'level-low' };
+      if (stage < 0.2)   return { label: 'Minimum',        cls: 'level-minimum' };
+      if (stage < 0.3)   return { label: 'Nice low',       cls: 'level-nice-low' };
+      if (stage < 0.4)   return { label: 'Prime',          cls: 'level-good' };
+      if (stage < 0.5)   return { label: 'Advanced',       cls: 'level-high' };
+      return               { label: 'Kemble level',         cls: 'level-very-high' };
     }
 
     // ── Format helpers ──────────────────────────────────────────────────────
