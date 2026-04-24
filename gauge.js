@@ -1,7 +1,7 @@
 // Callaghan Creek estimated gauge
 // Two-predictor models:
 //   1. Fitzsimmons Creek EC gauge 08MG026 — Callaghan = 0.0181 + 0.0413 × Fitz (m³/s), R²=0.815, n=118
-//   2. Ashlu Creek EC gauge 08MH024      — Callaghan = 0.1778 + 0.005735 × Ashlu (m³/s), R²=0.786, n=95
+//   2. Ashlu Creek (Innergex)             — Callaghan = 0.1778 + 0.005735 × Ashlu (m³/s), R²=0.786, n=95
 
 const FITZ_INTERCEPT      = 0.0181;
 const FITZ_COEF           = 0.0413;
@@ -11,20 +11,23 @@ const ASHLU_INTERCEPT     = 0.1778;
 const ASHLU_COEF          = 0.005735;
 const ASHLU_MIN_DISCHARGE = 2.6;    // m³/s — below training range
 
+// Ashlu data: scraped from Innergex by GitHub Actions, stored in repo
+const ASHLU_DATA_URL = 'https://raw.githubusercontent.com/DaveWortleyTD/callaghan-gauge/main/ashlu-data.json';
+
 // ECCC GeoMet OGC API — CORS-enabled, no proxy needed
-function apiURL(station) {
+function fitzApiURL() {
   const now   = new Date();
   const start = new Date(now - 48 * 60 * 60 * 1000).toISOString();
   const end   = now.toISOString();
   const base  = 'https://api.weather.gc.ca/collections/hydrometric-realtime/items';
-  return `${base}?STATION_NUMBER=${station}&datetime=${start}/${end}&limit=1000&sortby=DATETIME`;
+  return `${base}?STATION_NUMBER=08MG026&datetime=${start}/${end}&limit=1000&sortby=DATETIME`;
 }
 
 // ── Fetch + parse ─────────────────────────────────────────────────────────────
 
-async function fetchReadings(station) {
-  const response = await fetch(apiURL(station));
-  if (!response.ok) throw new Error(`Fetch failed for ${station}: ${response.status}`);
+async function fetchFitzReadings() {
+  const response = await fetch(fitzApiURL());
+  if (!response.ok) throw new Error(`Fitzsimmons fetch failed: ${response.status}`);
   const geojson = await response.json();
 
   return geojson.features
@@ -34,6 +37,17 @@ async function fetchReadings(station) {
       discharge: f.properties.DISCHARGE,
     }))
     .sort((a, b) => a.ts - b.ts);
+}
+
+async function fetchAshluReadings() {
+  const response = await fetch(ASHLU_DATA_URL);
+  if (!response.ok) throw new Error(`Ashlu data fetch failed: ${response.status}`);
+  const data = await response.json();
+
+  return (data.history ?? []).map(p => ({
+    ts:        new Date(p.t),
+    discharge: p.v,
+  }));
 }
 
 // ── Regression ────────────────────────────────────────────────────────────────
@@ -52,8 +66,8 @@ function estimateFromAshlu(discharge) {
 
 export async function loadData() {
   const [fitzPoints, ashluPoints] = await Promise.all([
-    fetchReadings('08MG026'),
-    fetchReadings('08MH024'),
+    fetchFitzReadings(),
+    fetchAshluReadings(),
   ]);
 
   // Per-predictor series using {x, y} point format for Chart.js time axes

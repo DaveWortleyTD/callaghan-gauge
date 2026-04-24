@@ -1,0 +1,32 @@
+name: Scrape Ashlu Flow
+
+on:
+  schedule:
+    - cron: '*/15 * * * *'   # every 15 minutes
+  workflow_dispatch:          # allow manual trigger
+
+concurrency:
+  group: scrape-ashlu
+  cancel-in-progress: false   # let the running job finish
+
+jobs:
+  scrape:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Scrape Innergex
+        run: python3 scripts/scrape_ashlu.py
+
+      - name: Commit data
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add ashlu-data.json
+          git diff --staged --quiet && echo "No change" && exit 0
+          git commit -m "Update Ashlu flow data"
+          git pull --rebase origin main
+          git push
