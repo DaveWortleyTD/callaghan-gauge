@@ -43,9 +43,11 @@ header h1 { font-size: 1.5rem; font-weight: 700; color: #161C2D; margin-bottom: 
   box-shadow: 0 1px 3px rgba(0,0,0,0.07);
   border-top: 3px solid transparent;
 }
-.card.fitz   { border-color: #335EEA; }
-.card.cal    { border-color: #28a745; }
-.card.time   { border-color: #dee2e6; }
+.card.fitz      { border-color: #335EEA; }
+.card.ashlu     { border-color: #e67e22; }
+.card.cal       { border-color: #28a745; }
+.card.cal-ashlu { border-color: #17a2b8; }
+.card.time      { border-color: #dee2e6; }
 
 .card-label {
   font-size: 0.72rem;

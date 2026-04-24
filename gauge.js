@@ -1,26 +1,30 @@
 // Callaghan Creek estimated gauge
-// Single-predictor model: Fitzsimmons Creek EC gauge 08MG026
-// callaghan_stage = INTERCEPT + FITZSIMMONS_COEF * fitzsimmons_discharge
+// Two-predictor models:
+//   1. Fitzsimmons Creek EC gauge 08MG026 — Callaghan = 0.0181 + 0.0413 × Fitz (m³/s), R²=0.815, n=118
+//   2. Ashlu Creek EC gauge 08MH024      — Callaghan = 0.1778 + 0.005735 × Ashlu (m³/s), R²=0.786, n=95
 
-const INTERCEPT        = 0.0181;
-const FITZSIMMONS_COEF = 0.0413;
-const MIN_DISCHARGE    = 1.5;   // m³/s — below training range
+const FITZ_INTERCEPT      = 0.0181;
+const FITZ_COEF           = 0.0413;
+const FITZ_MIN_DISCHARGE  = 1.5;    // m³/s — below training range
+
+const ASHLU_INTERCEPT     = 0.1778;
+const ASHLU_COEF          = 0.005735;
+const ASHLU_MIN_DISCHARGE = 2.6;    // m³/s — below training range
 
 // ECCC GeoMet OGC API — CORS-enabled, no proxy needed
-// Returns GeoJSON FeatureCollection with DISCHARGE and DATETIME properties
-function apiURL() {
+function apiURL(station) {
   const now   = new Date();
   const start = new Date(now - 48 * 60 * 60 * 1000).toISOString();
   const end   = now.toISOString();
   const base  = 'https://api.weather.gc.ca/collections/hydrometric-realtime/items';
-  return `${base}?STATION_NUMBER=08MG026&datetime=${start}/${end}&limit=1000&sortby=DATETIME`;
+  return `${base}?STATION_NUMBER=${station}&datetime=${start}/${end}&limit=1000&sortby=DATETIME`;
 }
 
 // ── Fetch + parse ─────────────────────────────────────────────────────────────
 
-async function fetchReadings() {
-  const response = await fetch(apiURL());
-  if (!response.ok) throw new Error(`Fetch failed: ${response.status}`);
+async function fetchReadings(station) {
+  const response = await fetch(apiURL(station));
+  if (!response.ok) throw new Error(`Fetch failed for ${station}: ${response.status}`);
   const geojson = await response.json();
 
   return geojson.features
@@ -34,29 +38,40 @@ async function fetchReadings() {
 
 // ── Regression ────────────────────────────────────────────────────────────────
 
-function estimateCallaghan(discharge) {
-  if (discharge < MIN_DISCHARGE) return null;
-  return Math.round((INTERCEPT + FITZSIMMONS_COEF * discharge) * 100) / 100;
+function estimateFromFitz(discharge) {
+  if (discharge < FITZ_MIN_DISCHARGE) return null;
+  return Math.round((FITZ_INTERCEPT + FITZ_COEF * discharge) * 100) / 100;
+}
+
+function estimateFromAshlu(discharge) {
+  if (discharge < ASHLU_MIN_DISCHARGE) return null;
+  return Math.round((ASHLU_INTERCEPT + ASHLU_COEF * discharge) * 100) / 100;
 }
 
 // ── Main ──────────────────────────────────────────────────────────────────────
 
 export async function loadData() {
-  const points = await fetchReadings();
+  const [fitzPoints, ashluPoints] = await Promise.all([
+    fetchReadings('08MG026'),
+    fetchReadings('08MH024'),
+  ]);
 
-  const labels        = [];
-  const fitzData      = [];
-  const callaghanData = [];
+  // Per-predictor series using {x, y} point format for Chart.js time axes
+  const fitzSeries     = fitzPoints.map(p => ({ x: p.ts, y: p.discharge }));
+  const fitzCalSeries  = fitzPoints.map(p => ({ x: p.ts, y: estimateFromFitz(p.discharge) }));
+  const ashluSeries    = ashluPoints.map(p => ({ x: p.ts, y: p.discharge }));
+  const ashluCalSeries = ashluPoints.map(p => ({ x: p.ts, y: estimateFromAshlu(p.discharge) }));
 
-  for (const p of points) {
-    labels.push(p.ts);
-    fitzData.push(p.discharge);
-    callaghanData.push(estimateCallaghan(p.discharge));
-  }
+  const latestFitz  = fitzPoints[fitzPoints.length - 1]  ?? null;
+  const latestAshlu = ashluPoints[ashluPoints.length - 1] ?? null;
 
-  // Latest reading for the summary cards
-  const latest = points[points.length - 1] ?? null;
-  const latestStage = latest ? estimateCallaghan(latest.discharge) : null;
+  const latestFitzStage  = latestFitz  ? estimateFromFitz(latestFitz.discharge)   : null;
+  const latestAshluStage = latestAshlu ? estimateFromAshlu(latestAshlu.discharge) : null;
 
-  return { labels, fitzData, callaghanData, latest, latestStage };
+  return {
+    fitzSeries, fitzCalSeries,
+    ashluSeries, ashluCalSeries,
+    latestFitz, latestAshlu,
+    latestFitzStage, latestAshluStage,
+  };
 }

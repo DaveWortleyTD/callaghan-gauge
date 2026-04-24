@@ -13,7 +13,7 @@
     <header>
       <h1>Callaghan Creek — Estimated Water Level</h1>
       <p class="subtitle">
-        Calculated from Fitzsimmons Creek EC gauge (08MG026) · 48-hour history ·
+        Calculated from Fitzsimmons Creek (08MG026) &amp; Ashlu Creek (08MH024) EC gauges · 48-hour history ·
         <a href="https://www.bcwhitewater.org/reaches/callaghan-creek" target="_blank">BCWhitewater reach page</a>
       </p>
     </header>
@@ -26,53 +26,75 @@
         <div class="card-value" id="fitz-value">—<span class="card-unit">m³/s</span></div>
         <div class="card-note" id="fitz-time">Loading…</div>
       </div>
-      <div class="card cal">
-        <div class="card-label">Est. Callaghan Level</div>
-        <div class="card-value" id="cal-value">—<span class="card-unit">m</span></div>
-        <div id="level-badge" class="level-badge level-unknown">—</div>
+      <div class="card ashlu">
+        <div class="card-label">Ashlu Creek</div>
+        <div class="card-value" id="ashlu-value">—<span class="card-unit">m³/s</span></div>
+        <div class="card-note" id="ashlu-time">Loading…</div>
       </div>
-      <div class="card time">
-        <div class="card-label">Data Updated</div>
-        <div class="card-value" id="update-time" style="font-size:1rem;padding-top:0.3rem">—</div>
-        <div class="card-note">EC real-time · hourly</div>
+      <div class="card cal">
+        <div class="card-label">Est. Callaghan — Fitz model</div>
+        <div class="card-value" id="cal-fitz-value">—<span class="card-unit">m</span></div>
+        <div id="level-badge-fitz" class="level-badge level-unknown">—</div>
+      </div>
+      <div class="card cal-ashlu">
+        <div class="card-label">Est. Callaghan — Ashlu model</div>
+        <div class="card-value" id="cal-ashlu-value">—<span class="card-unit">m</span></div>
+        <div id="level-badge-ashlu" class="level-badge level-unknown">—</div>
       </div>
     </div>
 
     <div class="chart-card">
-      <h2>48-Hour History</h2>
+      <h2>Fitzsimmons Correlation — 48-Hour History</h2>
       <div class="chart-wrap">
-        <canvas id="gauge-chart"></canvas>
+        <canvas id="fitz-chart"></canvas>
+      </div>
+    </div>
+
+    <div class="chart-card">
+      <h2>Ashlu Correlation — 48-Hour History</h2>
+      <div class="chart-wrap">
+        <canvas id="ashlu-chart"></canvas>
+      </div>
+    </div>
+
+    <div class="chart-card">
+      <h2>Combined — Both Models</h2>
+      <div class="chart-wrap">
+        <canvas id="combined-chart"></canvas>
       </div>
     </div>
 
     <div class="model-note">
       <strong>How this works:</strong>
-      The estimated Callaghan Creek water level is calculated from a linear regression model trained on
-      field observations from 2023–2025 (n=118, R²=0.815).
-      Formula: <strong>Callaghan (m) = 0.0181 + 0.0413 × Fitzsimmons discharge (m³/s)</strong>.
-      Valid for Fitzsimmons flows of 1.5–21.2 m³/s.
+      Callaghan Creek water level is estimated from two independent linear regression models trained on field observations from 2022–2025.
+      <br>
+      <strong>Fitzsimmons model</strong> (08MG026): Callaghan (m) = 0.0181 + 0.0413 × Fitzsimmons (m³/s) — R²=0.815, n=118. Valid for 1.5–21.2 m³/s.
+      <br>
+      <strong>Ashlu model</strong> (08MH024): Callaghan (m) = 0.1778 + 0.005735 × Ashlu (m³/s) — R²=0.786, n=95. Valid for 2.6–145 m³/s.
+      <br>
       Levels: &lt;0.1m too low · 0.1m minimum · 0.2m nice low · 0.3–0.4m prime · 0.4–0.5m advanced · 0.5m+ Kemble level.
       This is an estimate only — always verify conditions before paddling.
     </div>
 
     <footer>
       <a href="https://www.bcwhitewater.org" target="_blank">BCWhitewater.org</a> ·
-      Gauge data: <a href="https://wateroffice.ec.gc.ca/report/real_time_e.html?stn=08MG026" target="_blank">Environment Canada · 08MG026</a>
+      Gauge data: <a href="https://wateroffice.ec.gc.ca/report/real_time_e.html?stn=08MG026" target="_blank">EC · 08MG026 Fitzsimmons</a> ·
+      <a href="https://wateroffice.ec.gc.ca/report/real_time_e.html?stn=08MH024" target="_blank">EC · 08MH024 Ashlu</a>
     </footer>
   </div>
 
   <script type="module">
     import { loadData } from './gauge.js';
 
-    // ── Level descriptions (update thresholds once you have field data) ─────
+    // ── Level descriptions ───────────────────────────────────────────────────
     function levelInfo(stage) {
-      if (stage === null) return { label: 'Below range',   cls: 'level-low' };
-      if (stage < 0.1)   return { label: 'Too low',        cls: 'level-low' };
-      if (stage < 0.2)   return { label: 'Minimum',        cls: 'level-minimum' };
-      if (stage < 0.3)   return { label: 'Nice low',       cls: 'level-nice-low' };
-      if (stage < 0.4)   return { label: 'Prime',          cls: 'level-good' };
-      if (stage < 0.5)   return { label: 'Advanced',       cls: 'level-high' };
-      return               { label: 'Kemble level',         cls: 'level-very-high' };
+      if (stage === null) return { label: 'Below range',  cls: 'level-low' };
+      if (stage < 0.1)   return { label: 'Too low',       cls: 'level-low' };
+      if (stage < 0.2)   return { label: 'Minimum',       cls: 'level-minimum' };
+      if (stage < 0.3)   return { label: 'Nice low',      cls: 'level-nice-low' };
+      if (stage < 0.4)   return { label: 'Prime',         cls: 'level-good' };
+      if (stage < 0.5)   return { label: 'Advanced',      cls: 'level-high' };
+      return               { label: 'Kemble level',        cls: 'level-very-high' };
     }
 
     // ── Format helpers ──────────────────────────────────────────────────────
@@ -81,36 +103,68 @@
         timeZone: 'America/Vancouver',
         month: 'short', day: 'numeric',
         hour: 'numeric', minute: '2-digit',
-        hour12: true
+        hour12: true,
       });
     }
 
-    // ── Chart ───────────────────────────────────────────────────────────────
-    let chart;
+    // ── Shared chart options ─────────────────────────────────────────────────
+    const xScaleBase = {
+      type: 'time',
+      time: {
+        unit: 'hour',
+        displayFormats: { hour: 'MMM d, ha' },
+        tooltipFormat: 'MMM d, h:mm a',
+      },
+      ticks: { font: { family: 'Inter', size: 11 }, color: '#506690', maxTicksLimit: 10 },
+      grid: { color: '#f0f0f0' },
+    };
 
-    function buildChart(labels, fitzData, callaghanData) {
-      const ctx = document.getElementById('gauge-chart').getContext('2d');
+    function tooltipCallbacks(dischargeLabelFn) {
+      return {
+        title(items) { return fmtTime(new Date(items[0].parsed.x)); },
+        label(item) {
+          const val = item.parsed.y;
+          if (item.datasetIndex === 0) {
+            return val !== null ? ` ${dischargeLabelFn()}: ${val} m³/s` : null;
+          }
+          return val !== null ? ` Est. Callaghan: ${val} m` : ` Est. Callaghan: below range`;
+        },
+      };
+    }
 
-      chart = new Chart(ctx, {
+    const tooltipStyle = {
+      backgroundColor: '#fff',
+      borderColor: '#dee2e6',
+      borderWidth: 1,
+      titleColor: '#161C2D',
+      bodyColor: '#506690',
+      titleFont: { family: 'Inter', weight: '600', size: 12 },
+      bodyFont: { family: 'Inter', size: 12 },
+      padding: 10,
+    };
+
+    // ── Fitzsimmons chart ────────────────────────────────────────────────────
+    function buildFitzChart(fitzSeries, fitzCalSeries) {
+      const ctx = document.getElementById('fitz-chart').getContext('2d');
+      return new Chart(ctx, {
         type: 'line',
         data: {
-          labels,
           datasets: [
             {
-              label: 'Fitzsimmons Creek (m³/s)',
-              data: fitzData,
+              label: 'Fitzsimmons discharge (m³/s)',
+              data: fitzSeries,
               borderColor: '#335EEA',
               backgroundColor: 'rgba(51,94,234,0.08)',
               borderWidth: 2,
               pointRadius: 2,
               pointHoverRadius: 5,
               tension: 0.3,
-              yAxisID: 'yFitz',
+              yAxisID: 'yDischarge',
               fill: true,
             },
             {
-              label: 'Est. Callaghan Level (m)',
-              data: callaghanData,
+              label: 'Est. Callaghan — Fitz model (m)',
+              data: fitzCalSeries,
               borderColor: '#28a745',
               backgroundColor: 'rgba(40,167,69,0.08)',
               borderWidth: 2.5,
@@ -128,75 +182,147 @@
           maintainAspectRatio: false,
           interaction: { mode: 'index', intersect: false },
           plugins: {
-            legend: {
-              position: 'top',
-              labels: {
-                font: { family: 'Inter', size: 12 },
-                usePointStyle: true,
-                pointStyleWidth: 10,
-              },
+            legend: { position: 'top', labels: { font: { family: 'Inter', size: 12 }, usePointStyle: true, pointStyleWidth: 10 } },
+            tooltip: { ...tooltipStyle, callbacks: tooltipCallbacks(() => 'Fitzsimmons') },
+          },
+          scales: {
+            x: xScaleBase,
+            yDischarge: {
+              type: 'linear', position: 'left',
+              title: { display: true, text: 'Fitzsimmons discharge (m³/s)', font: { family: 'Inter', size: 11 }, color: '#335EEA' },
+              ticks: { font: { family: 'Inter', size: 11 }, color: '#335EEA' },
+              grid: { color: '#f0f0f0' },
             },
+            yCal: {
+              type: 'linear', position: 'right',
+              title: { display: true, text: 'Est. Callaghan level (m)', font: { family: 'Inter', size: 11 }, color: '#28a745' },
+              ticks: { font: { family: 'Inter', size: 11 }, color: '#28a745' },
+              grid: { drawOnChartArea: false },
+            },
+          },
+        },
+      });
+    }
+
+    // ── Ashlu chart ──────────────────────────────────────────────────────────
+    function buildAshluChart(ashluSeries, ashluCalSeries) {
+      const ctx = document.getElementById('ashlu-chart').getContext('2d');
+      return new Chart(ctx, {
+        type: 'line',
+        data: {
+          datasets: [
+            {
+              label: 'Ashlu discharge (m³/s)',
+              data: ashluSeries,
+              borderColor: '#e67e22',
+              backgroundColor: 'rgba(230,126,34,0.08)',
+              borderWidth: 2,
+              pointRadius: 2,
+              pointHoverRadius: 5,
+              tension: 0.3,
+              yAxisID: 'yDischarge',
+              fill: true,
+            },
+            {
+              label: 'Est. Callaghan — Ashlu model (m)',
+              data: ashluCalSeries,
+              borderColor: '#17a2b8',
+              backgroundColor: 'rgba(23,162,184,0.08)',
+              borderWidth: 2.5,
+              pointRadius: 2,
+              pointHoverRadius: 5,
+              tension: 0.3,
+              yAxisID: 'yCal',
+              fill: true,
+              spanGaps: false,
+            },
+          ],
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          interaction: { mode: 'index', intersect: false },
+          plugins: {
+            legend: { position: 'top', labels: { font: { family: 'Inter', size: 12 }, usePointStyle: true, pointStyleWidth: 10 } },
+            tooltip: { ...tooltipStyle, callbacks: tooltipCallbacks(() => 'Ashlu') },
+          },
+          scales: {
+            x: xScaleBase,
+            yDischarge: {
+              type: 'linear', position: 'left',
+              title: { display: true, text: 'Ashlu discharge (m³/s)', font: { family: 'Inter', size: 11 }, color: '#e67e22' },
+              ticks: { font: { family: 'Inter', size: 11 }, color: '#e67e22' },
+              grid: { color: '#f0f0f0' },
+            },
+            yCal: {
+              type: 'linear', position: 'right',
+              title: { display: true, text: 'Est. Callaghan level (m)', font: { family: 'Inter', size: 11 }, color: '#17a2b8' },
+              ticks: { font: { family: 'Inter', size: 11 }, color: '#17a2b8' },
+              grid: { drawOnChartArea: false },
+            },
+          },
+        },
+      });
+    }
+
+    // ── Combined chart ───────────────────────────────────────────────────────
+    function buildCombinedChart(fitzCalSeries, ashluCalSeries) {
+      const ctx = document.getElementById('combined-chart').getContext('2d');
+      return new Chart(ctx, {
+        type: 'line',
+        data: {
+          datasets: [
+            {
+              label: 'Est. Callaghan — Fitz model (m)',
+              data: fitzCalSeries,
+              borderColor: '#28a745',
+              backgroundColor: 'rgba(40,167,69,0.06)',
+              borderWidth: 2.5,
+              pointRadius: 2,
+              pointHoverRadius: 5,
+              tension: 0.3,
+              fill: true,
+              spanGaps: false,
+            },
+            {
+              label: 'Est. Callaghan — Ashlu model (m)',
+              data: ashluCalSeries,
+              borderColor: '#17a2b8',
+              backgroundColor: 'rgba(23,162,184,0.06)',
+              borderWidth: 2.5,
+              pointRadius: 2,
+              pointHoverRadius: 5,
+              tension: 0.3,
+              fill: true,
+              spanGaps: false,
+            },
+          ],
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          interaction: { mode: 'index', intersect: false },
+          plugins: {
+            legend: { position: 'top', labels: { font: { family: 'Inter', size: 12 }, usePointStyle: true, pointStyleWidth: 10 } },
             tooltip: {
-              backgroundColor: '#fff',
-              borderColor: '#dee2e6',
-              borderWidth: 1,
-              titleColor: '#161C2D',
-              bodyColor: '#506690',
-              titleFont: { family: 'Inter', weight: '600', size: 12 },
-              bodyFont: { family: 'Inter', size: 12 },
-              padding: 10,
+              ...tooltipStyle,
               callbacks: {
-                title(items) {
-                  return fmtTime(new Date(items[0].parsed.x));
-                },
+                title(items) { return fmtTime(new Date(items[0].parsed.x)); },
                 label(item) {
-                  const unit = item.datasetIndex === 0 ? ' m³/s' : ' m';
-                  const val  = item.parsed.y;
-                  return val !== null
-                    ? ` ${item.dataset.label.split('(')[0].trim()}: ${val}${unit}`
-                    : ` Callaghan: below range`;
+                  const val = item.parsed.y;
+                  const name = item.datasetIndex === 0 ? 'Fitz model' : 'Ashlu model';
+                  return val !== null ? ` ${name}: ${val} m` : ` ${name}: below range`;
                 },
               },
             },
           },
           scales: {
-            x: {
-              type: 'time',
-              time: {
-                unit: 'hour',
-                displayFormats: { hour: 'MMM d, ha' },
-                tooltipFormat: 'MMM d, h:mm a',
-              },
-              ticks: {
-                font: { family: 'Inter', size: 11 },
-                color: '#506690',
-                maxTicksLimit: 10,
-              },
+            x: xScaleBase,
+            y: {
+              type: 'linear', position: 'left',
+              title: { display: true, text: 'Est. Callaghan level (m)', font: { family: 'Inter', size: 11 }, color: '#506690' },
+              ticks: { font: { family: 'Inter', size: 11 }, color: '#506690' },
               grid: { color: '#f0f0f0' },
-            },
-            yFitz: {
-              type: 'linear',
-              position: 'left',
-              title: {
-                display: true,
-                text: 'Fitzsimmons discharge (m³/s)',
-                font: { family: 'Inter', size: 11 },
-                color: '#335EEA',
-              },
-              ticks: { font: { family: 'Inter', size: 11 }, color: '#335EEA' },
-              grid: { color: '#f0f0f0' },
-            },
-            yCal: {
-              type: 'linear',
-              position: 'right',
-              title: {
-                display: true,
-                text: 'Est. Callaghan level (m)',
-                font: { family: 'Inter', size: 11 },
-                color: '#28a745',
-              },
-              ticks: { font: { family: 'Inter', size: 11 }, color: '#28a745' },
-              grid: { drawOnChartArea: false },
             },
           },
         },
@@ -206,30 +332,44 @@
     // ── Bootstrap ───────────────────────────────────────────────────────────
     async function init() {
       try {
-        const { labels, fitzData, callaghanData, latest, latestStage } = await loadData();
+        const {
+          fitzSeries, fitzCalSeries,
+          ashluSeries, ashluCalSeries,
+          latestFitz, latestAshlu,
+          latestFitzStage, latestAshluStage,
+        } = await loadData();
 
-        // Summary cards
-        if (latest) {
+        // Fitzsimmons card
+        if (latestFitz) {
           document.getElementById('fitz-value').innerHTML =
-            `${latest.discharge.toFixed(2)}<span class="card-unit">m³/s</span>`;
-          document.getElementById('fitz-time').textContent = fmtTime(latest.ts);
-          document.getElementById('update-time').textContent = fmtTime(latest.ts);
+            `${latestFitz.discharge.toFixed(2)}<span class="card-unit">m³/s</span>`;
+          document.getElementById('fitz-time').textContent = fmtTime(latestFitz.ts);
         }
 
-        if (latestStage !== null) {
-          document.getElementById('cal-value').innerHTML =
-            `${latestStage.toFixed(2)}<span class="card-unit">m</span>`;
-        } else {
-          document.getElementById('cal-value').innerHTML =
-            `—<span class="card-unit">m</span>`;
+        // Ashlu card
+        if (latestAshlu) {
+          document.getElementById('ashlu-value').innerHTML =
+            `${latestAshlu.discharge.toFixed(2)}<span class="card-unit">m³/s</span>`;
+          document.getElementById('ashlu-time').textContent = fmtTime(latestAshlu.ts);
         }
 
-        const info = levelInfo(latestStage);
-        const badge = document.getElementById('level-badge');
-        badge.textContent = info.label;
-        badge.className = `level-badge ${info.cls}`;
+        // Callaghan estimate cards
+        const setCalCard = (valueId, badgeId, stage) => {
+          document.getElementById(valueId).innerHTML = stage !== null
+            ? `${stage.toFixed(2)}<span class="card-unit">m</span>`
+            : `—<span class="card-unit">m</span>`;
+          const info = levelInfo(stage);
+          const badge = document.getElementById(badgeId);
+          badge.textContent = info.label;
+          badge.className = `level-badge ${info.cls}`;
+        };
 
-        buildChart(labels, fitzData, callaghanData);
+        setCalCard('cal-fitz-value',  'level-badge-fitz',  latestFitzStage);
+        setCalCard('cal-ashlu-value', 'level-badge-ashlu', latestAshluStage);
+
+        buildFitzChart(fitzSeries, fitzCalSeries);
+        buildAshluChart(ashluSeries, ashluCalSeries);
+        buildCombinedChart(fitzCalSeries, ashluCalSeries);
 
       } catch (err) {
         document.getElementById('error-area').innerHTML =
