@@ -375,11 +375,11 @@
         renderObsList();
 
         if (combinedChart) {
-          combinedChart.data.datasets[2].data.push({
-            x: newObs.ts, y: newObs.level,
-            note: newObs.note, paddler: newObs.paddler,
-          });
-          combinedChart.update();
+          const obsDataset = combinedChart.data.datasets.find(d => d.type === 'scatter');
+          if (obsDataset) {
+            obsDataset.data.push({ x: newObs.ts, y: newObs.level, note: newObs.note, paddler: newObs.paddler });
+            combinedChart.update();
+          }
         }
 
         status.textContent = 'Observation saved — thanks!';
