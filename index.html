@@ -44,21 +44,7 @@
     </div>
 
     <div class="chart-card">
-      <h2>Ashlu Correlation — 48-Hour History</h2>
-      <div class="chart-wrap">
-        <canvas id="ashlu-chart"></canvas>
-      </div>
-    </div>
-
-    <div class="chart-card">
-      <h2>Fitzsimmons Correlation — 48-Hour History</h2>
-      <div class="chart-wrap">
-        <canvas id="fitz-chart"></canvas>
-      </div>
-    </div>
-
-    <div class="chart-card">
-      <h2>Combined — Both Models</h2>
+      <h2>Estimated Callaghan Level — 48-Hour History</h2>
       <div class="chart-wrap">
         <canvas id="combined-chart"></canvas>
       </div>
@@ -158,27 +144,6 @@
       grid: { color: '#f0f0f0' },
     };
 
-    function tooltipCallbacks(dischargeLabelFn) {
-      return {
-        title(items) { return fmtTime(new Date(items[0].parsed.x)); },
-        label(item) {
-          const val = item.parsed.y;
-          if (item.datasetIndex === 0) {
-            return val !== null ? ` ${dischargeLabelFn()}: ${val} m³/s` : null;
-          }
-          if (item.datasetIndex === 2) {
-            if (val === null || val === undefined) return null;
-            const raw = item.raw;
-            let text = ` Observed: ${val} m`;
-            if (raw.paddler) text += ` — ${raw.paddler}`;
-            if (raw.note)    text += `\n ${raw.note}`;
-            return text;
-          }
-          return val !== null ? ` Est. Callaghan: ${val} m` : ` Est. Callaghan: below range`;
-        },
-      };
-    }
-
     const tooltipStyle = {
       backgroundColor: '#fff',
       borderColor: '#dee2e6',
@@ -189,150 +154,6 @@
       bodyFont: { family: 'Inter', size: 12 },
       padding: 10,
     };
-
-    // ── Fitzsimmons chart ────────────────────────────────────────────────────
-    function buildFitzChart(fitzSeries, fitzCalSeries, observationSeries) {
-      const ctx = document.getElementById('fitz-chart').getContext('2d');
-      return new Chart(ctx, {
-        type: 'line',
-        data: {
-          datasets: [
-            {
-              label: 'Fitzsimmons discharge (m³/s)',
-              data: fitzSeries,
-              borderColor: '#335EEA',
-              backgroundColor: 'rgba(51,94,234,0.08)',
-              borderWidth: 2,
-              pointRadius: 2,
-              pointHoverRadius: 5,
-              tension: 0.3,
-              yAxisID: 'yDischarge',
-              fill: true,
-            },
-            {
-              label: 'Est. Callaghan — Fitz model (m)',
-              data: fitzCalSeries,
-              borderColor: '#28a745',
-              backgroundColor: 'rgba(40,167,69,0.08)',
-              borderWidth: 2.5,
-              pointRadius: 2,
-              pointHoverRadius: 5,
-              tension: 0.3,
-              yAxisID: 'yCal',
-              fill: true,
-              spanGaps: false,
-            },
-            {
-              type: 'scatter',
-              label: 'Field observations (m)',
-              data: observationSeries,
-              backgroundColor: '#7C3AED',
-              borderColor: '#fff',
-              borderWidth: 2,
-              pointRadius: 8,
-              pointHoverRadius: 10,
-              yAxisID: 'yCal',
-            },
-          ],
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          interaction: { mode: 'nearest', intersect: false, axis: 'xy' },
-          plugins: {
-            legend: { position: 'top', labels: { font: { family: 'Inter', size: 12 }, usePointStyle: true, pointStyleWidth: 10 } },
-            tooltip: { ...tooltipStyle, callbacks: tooltipCallbacks(() => 'Fitzsimmons') },
-          },
-          scales: {
-            x: xScaleBase,
-            yDischarge: {
-              type: 'linear', position: 'left',
-              title: { display: true, text: 'Fitzsimmons discharge (m³/s)', font: { family: 'Inter', size: 11 }, color: '#335EEA' },
-              ticks: { font: { family: 'Inter', size: 11 }, color: '#335EEA' },
-              grid: { color: '#f0f0f0' },
-            },
-            yCal: {
-              type: 'linear', position: 'right',
-              title: { display: true, text: 'Est. Callaghan level (m)', font: { family: 'Inter', size: 11 }, color: '#28a745' },
-              ticks: { font: { family: 'Inter', size: 11 }, color: '#28a745' },
-              grid: { drawOnChartArea: false },
-            },
-          },
-        },
-      });
-    }
-
-    // ── Ashlu chart ──────────────────────────────────────────────────────────
-    function buildAshluChart(ashluSeries, ashluCalSeries, observationSeries) {
-      const ctx = document.getElementById('ashlu-chart').getContext('2d');
-      return new Chart(ctx, {
-        type: 'line',
-        data: {
-          datasets: [
-            {
-              label: 'Ashlu discharge (m³/s)',
-              data: ashluSeries,
-              borderColor: '#e67e22',
-              backgroundColor: 'rgba(230,126,34,0.08)',
-              borderWidth: 2,
-              pointRadius: 2,
-              pointHoverRadius: 5,
-              tension: 0.3,
-              yAxisID: 'yDischarge',
-              fill: true,
-            },
-            {
-              label: 'Est. Callaghan — Ashlu model (m)',
-              data: ashluCalSeries,
-              borderColor: '#17a2b8',
-              backgroundColor: 'rgba(23,162,184,0.08)',
-              borderWidth: 2.5,
-              pointRadius: 2,
-              pointHoverRadius: 5,
-              tension: 0.3,
-              yAxisID: 'yCal',
-              fill: true,
-              spanGaps: false,
-            },
-            {
-              type: 'scatter',
-              label: 'Field observations (m)',
-              data: observationSeries,
-              backgroundColor: '#7C3AED',
-              borderColor: '#fff',
-              borderWidth: 2,
-              pointRadius: 8,
-              pointHoverRadius: 10,
-              yAxisID: 'yCal',
-            },
-          ],
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          interaction: { mode: 'nearest', intersect: false, axis: 'xy' },
-          plugins: {
-            legend: { position: 'top', labels: { font: { family: 'Inter', size: 12 }, usePointStyle: true, pointStyleWidth: 10 } },
-            tooltip: { ...tooltipStyle, callbacks: tooltipCallbacks(() => 'Ashlu') },
-          },
-          scales: {
-            x: xScaleBase,
-            yDischarge: {
-              type: 'linear', position: 'left',
-              title: { display: true, text: 'Ashlu discharge (m³/s)', font: { family: 'Inter', size: 11 }, color: '#e67e22' },
-              ticks: { font: { family: 'Inter', size: 11 }, color: '#e67e22' },
-              grid: { color: '#f0f0f0' },
-            },
-            yCal: {
-              type: 'linear', position: 'right',
-              title: { display: true, text: 'Est. Callaghan level (m)', font: { family: 'Inter', size: 11 }, color: '#17a2b8' },
-              ticks: { font: { family: 'Inter', size: 11 }, color: '#17a2b8' },
-              grid: { drawOnChartArea: false },
-            },
-          },
-        },
-      });
-    }
 
     // ── Combined chart ───────────────────────────────────────────────────────
     function buildCombinedChart(fitzCalSeries, ashluCalSeries, observationSeries) {
@@ -593,8 +414,6 @@
         setCalCard('cal-fitz-value',  'level-badge-fitz',  latestFitzStage);
         setCalCard('cal-ashlu-value', 'level-badge-ashlu', latestAshluStage);
 
-        buildFitzChart(fitzSeries, fitzCalSeries, observationSeries);
-        buildAshluChart(ashluSeries, ashluCalSeries, observationSeries);
         combinedChart = buildCombinedChart(fitzCalSeries, ashluCalSeries, observationSeries);
 
         allObservations = observations;
