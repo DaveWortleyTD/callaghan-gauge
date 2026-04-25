@@ -21,12 +21,7 @@
     <div id="error-area"></div>
 
     <div class="summary-cards">
-      <div class="card cal">
-        <div class="card-label">Est. Callaghan — Fitz model</div>
-        <div class="card-value" id="cal-fitz-value">—<span class="card-unit">m</span></div>
-        <div id="level-badge-fitz" class="level-badge level-unknown">—</div>
-      </div>
-      <div class="card cal-ashlu">
+<div class="card cal-ashlu">
         <div class="card-label">Est. Callaghan — Ashlu model</div>
         <div class="card-value" id="cal-ashlu-value">—<span class="card-unit">m</span></div>
         <div id="level-badge-ashlu" class="level-badge level-unknown">—</div>
@@ -429,8 +424,7 @@
           badge.className = `level-badge ${info.cls}`;
         };
 
-        setCalCard('cal-fitz-value',  'level-badge-fitz',  latestFitzStage);
-        setCalCard('cal-ashlu-value', 'level-badge-ashlu', latestAshluStage);
+setCalCard('cal-ashlu-value', 'level-badge-ashlu', latestAshluStage);
         setCalCard('cal-elaho-value', 'level-badge-elaho', latestElahoStage);
 
         combinedChart = buildCombinedChart(fitzCalSeries, ashluCalSeries, elahoCalSeries, observationSeries);
