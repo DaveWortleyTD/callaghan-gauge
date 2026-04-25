@@ -44,7 +44,7 @@
       <div class="card elaho">
         <div class="card-label">Elaho River</div>
         <div class="card-value" id="elaho-value">—<span class="card-unit">m³/s</span></div>
-        <div class="card-note" id="elaho-time">Loading…</div>
+        <div class="card-note" id="elaho-time">—</div>
       </div>
       <div class="card cal-elaho">
         <div class="card-label">Est. Callaghan — Elaho model</div>
@@ -461,6 +461,8 @@
           document.getElementById('elaho-value').innerHTML =
             `${latestElaho.discharge.toFixed(1)}<span class="card-unit">m³/s</span>`;
           document.getElementById('elaho-time').textContent = fmtTime(latestElaho.ts);
+        } else {
+          document.getElementById('elaho-time').textContent = 'No recent data';
         }
 
         combinedChart = buildCombinedChart(fitzCalSeries, ashluCalSeries, elahoCalSeries, observationSeries);

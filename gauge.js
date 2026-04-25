@@ -46,7 +46,9 @@ async function fetchEcccReadings(station, label) {
 }
 
 function fetchFitzReadings()  { return fetchEcccReadings('08MG026', 'Fitzsimmons'); }
-function fetchElahoReadings() { return fetchEcccReadings('08GA071', 'Elaho'); }
+async function fetchElahoReadings() {
+  try { return await fetchEcccReadings('08GA071', 'Elaho'); } catch { return []; }
+}
 
 async function fetchAshluReadings() {
   const response = await fetch(ASHLU_DATA_URL);
