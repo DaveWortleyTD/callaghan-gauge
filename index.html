@@ -166,6 +166,14 @@
           if (item.datasetIndex === 0) {
             return val !== null ? ` ${dischargeLabelFn()}: ${val} m³/s` : null;
           }
+          if (item.datasetIndex === 2) {
+            if (val === null || val === undefined) return null;
+            const raw = item.raw;
+            let text = ` Observed: ${val} m`;
+            if (raw.paddler) text += ` — ${raw.paddler}`;
+            if (raw.note)    text += `\n ${raw.note}`;
+            return text;
+          }
           return val !== null ? ` Est. Callaghan: ${val} m` : ` Est. Callaghan: below range`;
         },
       };
@@ -183,7 +191,7 @@
     };
 
     // ── Fitzsimmons chart ────────────────────────────────────────────────────
-    function buildFitzChart(fitzSeries, fitzCalSeries) {
+    function buildFitzChart(fitzSeries, fitzCalSeries, observationSeries) {
       const ctx = document.getElementById('fitz-chart').getContext('2d');
       return new Chart(ctx, {
         type: 'line',
@@ -214,12 +222,23 @@
               fill: true,
               spanGaps: false,
             },
+            {
+              type: 'scatter',
+              label: 'Field observations (m)',
+              data: observationSeries,
+              backgroundColor: '#7C3AED',
+              borderColor: '#fff',
+              borderWidth: 2,
+              pointRadius: 8,
+              pointHoverRadius: 10,
+              yAxisID: 'yCal',
+            },
           ],
         },
         options: {
           responsive: true,
           maintainAspectRatio: false,
-          interaction: { mode: 'index', intersect: false },
+          interaction: { mode: 'nearest', intersect: false, axis: 'xy' },
           plugins: {
             legend: { position: 'top', labels: { font: { family: 'Inter', size: 12 }, usePointStyle: true, pointStyleWidth: 10 } },
             tooltip: { ...tooltipStyle, callbacks: tooltipCallbacks(() => 'Fitzsimmons') },
@@ -244,7 +263,7 @@
     }
 
     // ── Ashlu chart ──────────────────────────────────────────────────────────
-    function buildAshluChart(ashluSeries, ashluCalSeries) {
+    function buildAshluChart(ashluSeries, ashluCalSeries, observationSeries) {
       const ctx = document.getElementById('ashlu-chart').getContext('2d');
       return new Chart(ctx, {
         type: 'line',
@@ -275,12 +294,23 @@
               fill: true,
               spanGaps: false,
             },
+            {
+              type: 'scatter',
+              label: 'Field observations (m)',
+              data: observationSeries,
+              backgroundColor: '#7C3AED',
+              borderColor: '#fff',
+              borderWidth: 2,
+              pointRadius: 8,
+              pointHoverRadius: 10,
+              yAxisID: 'yCal',
+            },
           ],
         },
         options: {
           responsive: true,
           maintainAspectRatio: false,
-          interaction: { mode: 'index', intersect: false },
+          interaction: { mode: 'nearest', intersect: false, axis: 'xy' },
           plugins: {
             legend: { position: 'top', labels: { font: { family: 'Inter', size: 12 }, usePointStyle: true, pointStyleWidth: 10 } },
             tooltip: { ...tooltipStyle, callbacks: tooltipCallbacks(() => 'Ashlu') },
@@ -557,8 +587,8 @@
         setCalCard('cal-fitz-value',  'level-badge-fitz',  latestFitzStage);
         setCalCard('cal-ashlu-value', 'level-badge-ashlu', latestAshluStage);
 
-        buildFitzChart(fitzSeries, fitzCalSeries);
-        buildAshluChart(ashluSeries, ashluCalSeries);
+        buildFitzChart(fitzSeries, fitzCalSeries, observationSeries);
+        buildAshluChart(ashluSeries, ashluCalSeries, observationSeries);
         combinedChart = buildCombinedChart(fitzCalSeries, ashluCalSeries, observationSeries);
 
         allObservations = observations;
