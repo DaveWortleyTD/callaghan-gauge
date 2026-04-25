@@ -444,7 +444,7 @@
 
         // Callaghan estimate cards
         const setCalCard = (valueId, badgeId, stage) => {
-          document.getElementById(valueId).innerHTML = stage !== null
+          document.getElementById(valueId).innerHTML = stage != null
             ? `${stage.toFixed(2)}<span class="card-unit">m</span>`
             : `—<span class="card-unit">m</span>`;
           const info = levelInfo(stage);
