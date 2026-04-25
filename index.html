@@ -57,7 +57,7 @@
         <div class="obs-fields">
           <div class="obs-field">
             <label for="obs-t">Date &amp; time (Vancouver)</label>
-            <input type="datetime-local" id="obs-t" name="t" required />
+            <input type="datetime-local" id="obs-t" name="t" step="900" required />
           </div>
           <div class="obs-field">
             <label for="obs-v">Callaghan gauge level (m)</label>
@@ -250,11 +250,12 @@
 
     // ── Observations: datetime input helper ─────────────────────────────────
     function localDatetimeValue(date = new Date()) {
+      const rounded = new Date(Math.round(date.getTime() / (15 * 60 * 1000)) * (15 * 60 * 1000));
       const parts = new Intl.DateTimeFormat('en-CA', {
         timeZone: 'America/Vancouver',
         year: 'numeric', month: '2-digit', day: '2-digit',
         hour: '2-digit', minute: '2-digit', hour12: false,
-      }).formatToParts(date);
+      }).formatToParts(rounded);
       const get = type => parts.find(p => p.type === type).value;
       return `${get('year')}-${get('month')}-${get('day')}T${get('hour')}:${get('minute')}`;
     }
