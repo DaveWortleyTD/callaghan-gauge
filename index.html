@@ -133,14 +133,25 @@
     }
 
     // ── Shared chart options ─────────────────────────────────────────────────
+    function fmtAxisTick(tsMs) {
+      const parts = new Intl.DateTimeFormat('en-CA', {
+        timeZone: 'America/Vancouver',
+        month: 'short', day: 'numeric', hour: 'numeric', hour12: true,
+      }).formatToParts(new Date(tsMs));
+      const get = t => parts.find(p => p.type === t)?.value ?? '';
+      return `${get('month')} ${get('day')}, ${get('hour')}${get('dayPeriod').toLowerCase()}`;
+    }
+
     const xScaleBase = {
       type: 'time',
       time: {
         unit: 'hour',
-        displayFormats: { hour: 'MMM d, ha' },
         tooltipFormat: 'MMM d, h:mm a',
       },
-      ticks: { font: { family: 'Inter', size: 11 }, color: '#506690', maxTicksLimit: 10 },
+      ticks: {
+        font: { family: 'Inter', size: 11 }, color: '#506690', maxTicksLimit: 10,
+        callback: fmtAxisTick,
+      },
       grid: { color: '#f0f0f0' },
     };
 
