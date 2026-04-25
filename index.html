@@ -21,16 +21,6 @@
     <div id="error-area"></div>
 
     <div class="summary-cards">
-      <div class="card fitz">
-        <div class="card-label">Fitzsimmons Creek</div>
-        <div class="card-value" id="fitz-value">—<span class="card-unit">m³/s</span></div>
-        <div class="card-note" id="fitz-time">Loading…</div>
-      </div>
-      <div class="card ashlu">
-        <div class="card-label">Ashlu Creek</div>
-        <div class="card-value" id="ashlu-value">—<span class="card-unit">m³/s</span></div>
-        <div class="card-note" id="ashlu-time">Loading…</div>
-      </div>
       <div class="card cal">
         <div class="card-label">Est. Callaghan — Fitz model</div>
         <div class="card-value" id="cal-fitz-value">—<span class="card-unit">m</span></div>
@@ -40,11 +30,6 @@
         <div class="card-label">Est. Callaghan — Ashlu model</div>
         <div class="card-value" id="cal-ashlu-value">—<span class="card-unit">m</span></div>
         <div id="level-badge-ashlu" class="level-badge level-unknown">—</div>
-      </div>
-      <div class="card elaho">
-        <div class="card-label">Elaho River</div>
-        <div class="card-value" id="elaho-value">—<span class="card-unit">m³/s</span></div>
-        <div class="card-note" id="elaho-time">—</div>
       </div>
       <div class="card cal-elaho">
         <div class="card-label">Est. Callaghan — Elaho model</div>
@@ -196,6 +181,7 @@
               tension: 0.3,
               fill: true,
               spanGaps: false,
+              hidden: true,
             },
             {
               label: 'Est. Callaghan — Ashlu model (m)',
@@ -428,20 +414,6 @@
           observations, observationSeries,
         } = await loadData();
 
-        // Fitzsimmons card
-        if (latestFitz) {
-          document.getElementById('fitz-value').innerHTML =
-            `${latestFitz.discharge.toFixed(2)}<span class="card-unit">m³/s</span>`;
-          document.getElementById('fitz-time').textContent = fmtTime(latestFitz.ts);
-        }
-
-        // Ashlu card
-        if (latestAshlu) {
-          document.getElementById('ashlu-value').innerHTML =
-            `${latestAshlu.discharge.toFixed(2)}<span class="card-unit">m³/s</span>`;
-          document.getElementById('ashlu-time').textContent = fmtTime(latestAshlu.ts);
-        }
-
         // Callaghan estimate cards
         const setCalCard = (valueId, badgeId, stage) => {
           document.getElementById(valueId).innerHTML = stage != null
@@ -456,14 +428,6 @@
         setCalCard('cal-fitz-value',  'level-badge-fitz',  latestFitzStage);
         setCalCard('cal-ashlu-value', 'level-badge-ashlu', latestAshluStage);
         setCalCard('cal-elaho-value', 'level-badge-elaho', latestElahoStage);
-
-        if (latestElaho) {
-          document.getElementById('elaho-value').innerHTML =
-            `${latestElaho.discharge.toFixed(1)}<span class="card-unit">m³/s</span>`;
-          document.getElementById('elaho-time').textContent = fmtTime(latestElaho.ts);
-        } else {
-          document.getElementById('elaho-time').textContent = 'No recent data';
-        }
 
         combinedChart = buildCombinedChart(fitzCalSeries, ashluCalSeries, elahoCalSeries, observationSeries);
 
