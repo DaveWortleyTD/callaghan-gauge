@@ -14,6 +14,9 @@ const ASHLU_MIN_DISCHARGE = 2.6;    // m³/s — below training range
 // Ashlu data: scraped from Innergex by GitHub Actions, stored in repo
 const ASHLU_DATA_URL = 'https://raw.githubusercontent.com/DaveWortleyTD/callaghan-gauge/main/ashlu-data.json';
 
+// Field observations: submitted by paddlers via the Cloudflare Worker
+const OBSERVATIONS_URL = 'https://raw.githubusercontent.com/DaveWortleyTD/callaghan-gauge/main/observations.json';
+
 // ECCC GeoMet OGC API — CORS-enabled, no proxy needed
 function fitzApiURL() {
   const now   = new Date();
@@ -50,6 +53,22 @@ async function fetchAshluReadings() {
   }));
 }
 
+async function fetchObservations() {
+  try {
+    const response = await fetch(OBSERVATIONS_URL);
+    if (!response.ok) return [];
+    const data = await response.json();
+    return (data.observations ?? []).map(p => ({
+      ts:      new Date(p.t),
+      level:   p.v,
+      note:    p.note    ?? null,
+      paddler: p.paddler ?? null,
+    }));
+  } catch {
+    return [];
+  }
+}
+
 // ── Regression ────────────────────────────────────────────────────────────────
 
 function estimateFromFitz(discharge) {
@@ -65,9 +84,10 @@ function estimateFromAshlu(discharge) {
 // ── Main ──────────────────────────────────────────────────────────────────────
 
 export async function loadData() {
-  const [fitzPoints, ashluPoints] = await Promise.all([
+  const [fitzPoints, ashluPoints, observations] = await Promise.all([
     fetchFitzReadings(),
     fetchAshluReadings(),
+    fetchObservations(),
   ]);
 
   // Per-predictor series using {x, y} point format for Chart.js time axes
@@ -82,10 +102,18 @@ export async function loadData() {
   const latestFitzStage  = latestFitz  ? estimateFromFitz(latestFitz.discharge)   : null;
   const latestAshluStage = latestAshlu ? estimateFromAshlu(latestAshlu.discharge) : null;
 
+  const observationSeries = observations.map(p => ({
+    x:       p.ts,
+    y:       p.level,
+    note:    p.note,
+    paddler: p.paddler,
+  }));
+
   return {
     fitzSeries, fitzCalSeries,
     ashluSeries, ashluCalSeries,
     latestFitz, latestAshlu,
     latestFitzStage, latestAshluStage,
+    observations, observationSeries,
   };
 }

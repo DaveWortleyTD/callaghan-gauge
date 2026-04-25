@@ -64,6 +64,42 @@
       </div>
     </div>
 
+    <div class="obs-section">
+      <h2>Log a Field Observation</h2>
+      <p class="obs-intro">Paddled Callaghan recently? Record your gauge reading to help improve the model.</p>
+      <form id="obs-form" novalidate>
+        <div class="obs-fields">
+          <div class="obs-field">
+            <label for="obs-t">Date &amp; time (Vancouver)</label>
+            <input type="datetime-local" id="obs-t" name="t" required />
+          </div>
+          <div class="obs-field">
+            <label for="obs-v">Callaghan gauge level (m)</label>
+            <input type="number" id="obs-v" name="v" step="0.01" min="0" max="3" placeholder="e.g. 0.32" required />
+          </div>
+          <div class="obs-field obs-field--wide">
+            <label for="obs-note">Notes (optional)</label>
+            <input type="text" id="obs-note" name="note" maxlength="300" placeholder="Conditions, flow character, access…" />
+          </div>
+          <div class="obs-field">
+            <label for="obs-paddler">Your name (optional)</label>
+            <input type="text" id="obs-paddler" name="paddler" maxlength="60" placeholder="BC Whitewater username or name" />
+          </div>
+        </div>
+        <div class="obs-actions">
+          <button type="submit" id="obs-submit">Submit observation</button>
+          <span id="obs-status"></span>
+        </div>
+      </form>
+      <div id="obs-list-wrap">
+        <div class="obs-list-header">
+          <h3>Past observations</h3>
+          <button id="obs-export" type="button">Export CSV</button>
+        </div>
+        <div id="obs-list"></div>
+      </div>
+    </div>
+
     <div class="model-note">
       <strong>How this works:</strong>
       Callaghan Creek water level is estimated from two independent linear regression models trained on field observations from 2022–2025.
@@ -85,6 +121,9 @@
 
   <script type="module">
     import { loadData } from './gauge.js';
+
+    // ── Replace this with your deployed Cloudflare Worker URL ───────────────
+    const WORKER_URL = 'https://YOUR_WORKER.workers.dev/submit';
 
     // ── Level descriptions ───────────────────────────────────────────────────
     function levelInfo(stage) {
@@ -266,7 +305,7 @@
     }
 
     // ── Combined chart ───────────────────────────────────────────────────────
-    function buildCombinedChart(fitzCalSeries, ashluCalSeries) {
+    function buildCombinedChart(fitzCalSeries, ashluCalSeries, observationSeries) {
       const ctx = document.getElementById('combined-chart').getContext('2d');
       return new Chart(ctx, {
         type: 'line',
@@ -296,12 +335,23 @@
               fill: true,
               spanGaps: false,
             },
+            {
+              type: 'scatter',
+              label: 'Field observations (m)',
+              data: observationSeries,
+              backgroundColor: '#7C3AED',
+              borderColor: '#fff',
+              borderWidth: 2,
+              pointRadius: 8,
+              pointHoverRadius: 10,
+              pointStyle: 'circle',
+            },
           ],
         },
         options: {
           responsive: true,
           maintainAspectRatio: false,
-          interaction: { mode: 'index', intersect: false },
+          interaction: { mode: 'nearest', intersect: false, axis: 'xy' },
           plugins: {
             legend: { position: 'top', labels: { font: { family: 'Inter', size: 12 }, usePointStyle: true, pointStyleWidth: 10 } },
             tooltip: {
@@ -310,6 +360,13 @@
                 title(items) { return fmtTime(new Date(items[0].parsed.x)); },
                 label(item) {
                   const val = item.parsed.y;
+                  if (item.datasetIndex === 2) {
+                    const raw = item.raw;
+                    let text = ` Observed: ${val} m`;
+                    if (raw.paddler) text += ` — ${raw.paddler}`;
+                    if (raw.note)    text += `\n ${raw.note}`;
+                    return text;
+                  }
                   const name = item.datasetIndex === 0 ? 'Fitz model' : 'Ashlu model';
                   return val !== null ? ` ${name}: ${val} m` : ` ${name}: below range`;
                 },
@@ -329,14 +386,147 @@
       });
     }
 
+    // ── Observations: datetime input helper ─────────────────────────────────
+    function localDatetimeValue(date = new Date()) {
+      const parts = new Intl.DateTimeFormat('en-CA', {
+        timeZone: 'America/Vancouver',
+        year: 'numeric', month: '2-digit', day: '2-digit',
+        hour: '2-digit', minute: '2-digit', hour12: false,
+      }).formatToParts(date);
+      const get = type => parts.find(p => p.type === type).value;
+      return `${get('year')}-${get('month')}-${get('day')}T${get('hour')}:${get('minute')}`;
+    }
+
+    // ── Observations: render list ────────────────────────────────────────────
+    let allObservations = [];
+
+    function renderObsList() {
+      const el = document.getElementById('obs-list');
+      const wrap = document.getElementById('obs-list-wrap');
+      if (!allObservations.length) {
+        wrap.style.display = 'none';
+        return;
+      }
+      wrap.style.display = '';
+      const rows = [...allObservations].reverse().map(o => {
+        const info = levelInfo(o.level);
+        const note    = o.note    ? `<span class="obs-note">${o.note}</span>`       : '';
+        const paddler = o.paddler ? `<span class="obs-paddler">${o.paddler}</span>` : '';
+        return `<div class="obs-row">
+          <span class="obs-time">${fmtTime(o.ts)}</span>
+          <span class="obs-level">${o.level.toFixed(2)} m</span>
+          <span class="level-badge ${info.cls}">${info.label}</span>
+          ${paddler}${note}
+        </div>`;
+      });
+      el.innerHTML = rows.join('');
+    }
+
+    // ── Observations: export CSV ─────────────────────────────────────────────
+    function exportCSV() {
+      const lines = ['timestamp_utc,level_m,paddler,note'];
+      allObservations.forEach(o => {
+        const note    = (o.note    ?? '').replace(/"/g, '""');
+        const paddler = (o.paddler ?? '').replace(/"/g, '""');
+        lines.push(`${o.ts.toISOString()},${o.level},"${paddler}","${note}"`);
+      });
+      const blob = new Blob([lines.join('\n')], { type: 'text/csv' });
+      const url  = URL.createObjectURL(blob);
+      const a    = Object.assign(document.createElement('a'), {
+        href: url,
+        download: `callaghan-observations-${new Date().toISOString().slice(0,10)}.csv`,
+      });
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    // ── Observations: form submission ────────────────────────────────────────
+    let combinedChart;
+
+    async function submitObservation(e) {
+      e.preventDefault();
+      const form   = e.target;
+      const btn    = document.getElementById('obs-submit');
+      const status = document.getElementById('obs-status');
+
+      const tRaw = form.elements.t.value;
+      const v    = parseFloat(form.elements.v.value);
+      if (!tRaw || isNaN(v)) {
+        status.textContent = 'Please fill in the date/time and level.';
+        status.className   = 'obs-status-error';
+        return;
+      }
+
+      btn.disabled     = true;
+      btn.textContent  = 'Submitting…';
+      status.textContent = '';
+
+      // Convert the local datetime input (Vancouver) to UTC ISO string
+      const localDate = new Date(tRaw);
+      const body = {
+        t: localDate.toISOString(),
+        v,
+        note:    form.elements.note.value.trim()    || undefined,
+        paddler: form.elements.paddler.value.trim() || undefined,
+      };
+
+      try {
+        const resp = await fetch(WORKER_URL, {
+          method:  'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body:    JSON.stringify(body),
+        });
+        const data = await resp.json();
+        if (!resp.ok) throw new Error(data.error ?? 'Submit failed');
+
+        // Optimistically update in-memory list and chart
+        const newObs = {
+          ts:      new Date(data.observation.t),
+          level:   data.observation.v,
+          note:    data.observation.note    ?? null,
+          paddler: data.observation.paddler ?? null,
+        };
+        allObservations.push(newObs);
+        allObservations.sort((a, b) => a.ts - b.ts);
+        renderObsList();
+
+        if (combinedChart) {
+          combinedChart.data.datasets[2].data.push({
+            x: newObs.ts, y: newObs.level,
+            note: newObs.note, paddler: newObs.paddler,
+          });
+          combinedChart.update();
+        }
+
+        status.textContent = 'Observation saved — thanks!';
+        status.className   = 'obs-status-ok';
+        form.reset();
+        document.getElementById('obs-t').value = localDatetimeValue();
+
+      } catch (err) {
+        status.textContent = `Error: ${err.message}`;
+        status.className   = 'obs-status-error';
+      } finally {
+        btn.disabled    = false;
+        btn.textContent = 'Submit observation';
+      }
+    }
+
     // ── Bootstrap ───────────────────────────────────────────────────────────
     async function init() {
+      // Pre-fill datetime input with current Vancouver time
+      document.getElementById('obs-t').value = localDatetimeValue();
+      document.getElementById('obs-form').addEventListener('submit', submitObservation);
+      document.getElementById('obs-export').addEventListener('click', exportCSV);
+      document.getElementById('obs-list-wrap').style.display = 'none';
+
       try {
         const {
           fitzSeries, fitzCalSeries,
           ashluSeries, ashluCalSeries,
           latestFitz, latestAshlu,
           latestFitzStage, latestAshluStage,
+          observations, observationSeries,
         } = await loadData();
 
         // Fitzsimmons card
@@ -369,7 +559,10 @@
 
         buildFitzChart(fitzSeries, fitzCalSeries);
         buildAshluChart(ashluSeries, ashluCalSeries);
-        buildCombinedChart(fitzCalSeries, ashluCalSeries);
+        combinedChart = buildCombinedChart(fitzCalSeries, ashluCalSeries, observationSeries);
+
+        allObservations = observations;
+        renderObsList();
 
       } catch (err) {
         document.getElementById('error-area').innerHTML =
