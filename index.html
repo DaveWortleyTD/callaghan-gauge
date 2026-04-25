@@ -41,6 +41,16 @@
         <div class="card-value" id="cal-ashlu-value">—<span class="card-unit">m</span></div>
         <div id="level-badge-ashlu" class="level-badge level-unknown">—</div>
       </div>
+      <div class="card elaho">
+        <div class="card-label">Elaho River</div>
+        <div class="card-value" id="elaho-value">—<span class="card-unit">m³/s</span></div>
+        <div class="card-note" id="elaho-time">Loading…</div>
+      </div>
+      <div class="card cal-elaho">
+        <div class="card-label">Est. Callaghan — Elaho model</div>
+        <div class="card-value" id="cal-elaho-value">—<span class="card-unit">m</span></div>
+        <div id="level-badge-elaho" class="level-badge level-unknown">—</div>
+      </div>
     </div>
 
     <div class="chart-card">
@@ -93,6 +103,8 @@
       <strong>Fitzsimmons model</strong> (08MG026): Callaghan (m) = 0.0181 + 0.0413 × Fitzsimmons (m³/s) — R²=0.815, n=118. Valid for 1.5–21.2 m³/s.
       <br>
       <strong>Ashlu model</strong> (08MH024): Callaghan (m) = 0.1778 + 0.005735 × Ashlu (m³/s) — R²=0.786, n=95. Valid for 2.6–145 m³/s.
+      <br>
+      <strong>Elaho model</strong> (08GA071): Callaghan (m) = −0.0384 + 0.001911 × Elaho (m³/s) — R²=0.692, n=166. Valid for 67–420 m³/s.
       <br>
       Levels: &lt;0.1m too low · 0.1m minimum · 0.2m nice low · 0.3–0.4m prime · 0.4–0.5m advanced · 0.5m+ Kemble level.
       This is an estimate only — always verify conditions before paddling.
@@ -167,7 +179,7 @@
     };
 
     // ── Combined chart ───────────────────────────────────────────────────────
-    function buildCombinedChart(fitzCalSeries, ashluCalSeries, observationSeries) {
+    function buildCombinedChart(fitzCalSeries, ashluCalSeries, elahoCalSeries, observationSeries) {
       const ctx = document.getElementById('combined-chart').getContext('2d');
       return new Chart(ctx, {
         type: 'line',
@@ -190,6 +202,18 @@
               data: ashluCalSeries,
               borderColor: '#17a2b8',
               backgroundColor: 'rgba(23,162,184,0.06)',
+              borderWidth: 2.5,
+              pointRadius: 2,
+              pointHoverRadius: 5,
+              tension: 0.3,
+              fill: true,
+              spanGaps: false,
+            },
+            {
+              label: 'Est. Callaghan — Elaho model (m)',
+              data: elahoCalSeries,
+              borderColor: '#e74c3c',
+              backgroundColor: 'rgba(231,76,60,0.06)',
               borderWidth: 2.5,
               pointRadius: 2,
               pointHoverRadius: 5,
@@ -222,14 +246,15 @@
                 title(items) { return fmtTime(new Date(items[0].parsed.x)); },
                 label(item) {
                   const val = item.parsed.y;
-                  if (item.datasetIndex === 2) {
+                  if (item.datasetIndex === 3) {
                     const raw = item.raw;
                     let text = ` Observed: ${val} m`;
                     if (raw.paddler) text += ` — ${raw.paddler}`;
                     if (raw.note)    text += `\n ${raw.note}`;
                     return text;
                   }
-                  const name = item.datasetIndex === 0 ? 'Fitz model' : 'Ashlu model';
+                  const names = ['Fitz model', 'Ashlu model', 'Elaho model'];
+                  const name = names[item.datasetIndex];
                   return val !== null ? ` ${name}: ${val} m` : ` ${name}: below range`;
                 },
               },
@@ -397,8 +422,9 @@
         const {
           fitzSeries, fitzCalSeries,
           ashluSeries, ashluCalSeries,
-          latestFitz, latestAshlu,
-          latestFitzStage, latestAshluStage,
+          elahoSeries, elahoCalSeries,
+          latestFitz, latestAshlu, latestElaho,
+          latestFitzStage, latestAshluStage, latestElahoStage,
           observations, observationSeries,
         } = await loadData();
 
@@ -429,8 +455,15 @@
 
         setCalCard('cal-fitz-value',  'level-badge-fitz',  latestFitzStage);
         setCalCard('cal-ashlu-value', 'level-badge-ashlu', latestAshluStage);
+        setCalCard('cal-elaho-value', 'level-badge-elaho', latestElahoStage);
 
-        combinedChart = buildCombinedChart(fitzCalSeries, ashluCalSeries, observationSeries);
+        if (latestElaho) {
+          document.getElementById('elaho-value').innerHTML =
+            `${latestElaho.discharge.toFixed(1)}<span class="card-unit">m³/s</span>`;
+          document.getElementById('elaho-time').textContent = fmtTime(latestElaho.ts);
+        }
+
+        combinedChart = buildCombinedChart(fitzCalSeries, ashluCalSeries, elahoCalSeries, observationSeries);
 
         allObservations = observations;
         renderObsList();

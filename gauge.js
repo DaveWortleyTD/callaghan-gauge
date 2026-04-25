@@ -11,6 +11,10 @@ const ASHLU_INTERCEPT     = 0.1778;
 const ASHLU_COEF          = 0.005735;
 const ASHLU_MIN_DISCHARGE = 2.6;    // m³/s — below training range
 
+const ELAHO_INTERCEPT     = -0.0384;
+const ELAHO_COEF          = 0.00191132;
+const ELAHO_MIN_DISCHARGE = 67.3;   // m³/s — below training range
+
 // Ashlu data: scraped from Innergex by GitHub Actions, stored in repo
 const ASHLU_DATA_URL = 'https://raw.githubusercontent.com/DaveWortleyTD/callaghan-gauge/main/ashlu-data.json';
 
@@ -18,21 +22,20 @@ const ASHLU_DATA_URL = 'https://raw.githubusercontent.com/DaveWortleyTD/callagha
 const OBSERVATIONS_URL = 'https://raw.githubusercontent.com/DaveWortleyTD/callaghan-gauge/main/observations.json';
 
 // ECCC GeoMet OGC API — CORS-enabled, no proxy needed
-function fitzApiURL() {
+function ecccRealtimeURL(station) {
   const now   = new Date();
   const start = new Date(now - 48 * 60 * 60 * 1000).toISOString();
   const end   = now.toISOString();
   const base  = 'https://api.weather.gc.ca/collections/hydrometric-realtime/items';
-  return `${base}?STATION_NUMBER=08MG026&datetime=${start}/${end}&limit=1000&sortby=DATETIME`;
+  return `${base}?STATION_NUMBER=${station}&datetime=${start}/${end}&limit=1000&sortby=DATETIME`;
 }
 
 // ── Fetch + parse ─────────────────────────────────────────────────────────────
 
-async function fetchFitzReadings() {
-  const response = await fetch(fitzApiURL());
-  if (!response.ok) throw new Error(`Fitzsimmons fetch failed: ${response.status}`);
+async function fetchEcccReadings(station, label) {
+  const response = await fetch(ecccRealtimeURL(station));
+  if (!response.ok) throw new Error(`${label} fetch failed: ${response.status}`);
   const geojson = await response.json();
-
   return geojson.features
     .filter(f => f.properties.DISCHARGE !== null)
     .map(f => ({
@@ -41,6 +44,9 @@ async function fetchFitzReadings() {
     }))
     .sort((a, b) => a.ts - b.ts);
 }
+
+function fetchFitzReadings()  { return fetchEcccReadings('08MG026', 'Fitzsimmons'); }
+function fetchElahoReadings() { return fetchEcccReadings('08GA071', 'Elaho'); }
 
 async function fetchAshluReadings() {
   const response = await fetch(ASHLU_DATA_URL);
@@ -81,13 +87,19 @@ function estimateFromAshlu(discharge) {
   return Math.round((ASHLU_INTERCEPT + ASHLU_COEF * discharge) * 100) / 100;
 }
 
+function estimateFromElaho(discharge) {
+  if (discharge < ELAHO_MIN_DISCHARGE) return null;
+  return Math.round((ELAHO_INTERCEPT + ELAHO_COEF * discharge) * 100) / 100;
+}
+
 // ── Main ──────────────────────────────────────────────────────────────────────
 
 export async function loadData() {
-  const [fitzPoints, ashluPoints, observations] = await Promise.all([
+  const [fitzPoints, ashluPoints, observations, elahoPoints] = await Promise.all([
     fetchFitzReadings(),
     fetchAshluReadings(),
     fetchObservations(),
+    fetchElahoReadings(),
   ]);
 
   // Per-predictor series using {x, y} point format for Chart.js time axes
@@ -102,6 +114,12 @@ export async function loadData() {
   const latestFitzStage  = latestFitz  ? estimateFromFitz(latestFitz.discharge)   : null;
   const latestAshluStage = latestAshlu ? estimateFromAshlu(latestAshlu.discharge) : null;
 
+  const elahoSeries    = elahoPoints.map(p => ({ x: p.ts, y: p.discharge }));
+  const elahoCalSeries = elahoPoints.map(p => ({ x: p.ts, y: estimateFromElaho(p.discharge) }));
+
+  const latestElaho      = elahoPoints[elahoPoints.length - 1] ?? null;
+  const latestElahoStage = latestElaho ? estimateFromElaho(latestElaho.discharge) : null;
+
   const observationSeries = observations.map(p => ({
     x:       p.ts,
     y:       p.level,
@@ -112,8 +130,9 @@ export async function loadData() {
   return {
     fitzSeries, fitzCalSeries,
     ashluSeries, ashluCalSeries,
-    latestFitz, latestAshlu,
-    latestFitzStage, latestAshluStage,
+    elahoSeries, elahoCalSeries,
+    latestFitz, latestAshlu, latestElaho,
+    latestFitzStage, latestAshluStage, latestElahoStage,
     observations, observationSeries,
   };
 }
