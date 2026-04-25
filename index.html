@@ -491,8 +491,14 @@
       btn.textContent  = 'Submitting…';
       status.textContent = '';
 
-      // Convert the local datetime input (Vancouver) to UTC ISO string
-      const localDate = new Date(tRaw);
+      // Convert the datetime-local input (Vancouver time) to UTC.
+      // We must not use new Date(tRaw) directly — it uses the browser's local
+      // timezone, which may not be Vancouver. Instead we look up Vancouver's
+      // current UTC offset and append it before parsing.
+      const vanOffset = new Intl.DateTimeFormat('en', {
+        timeZone: 'America/Vancouver', timeZoneName: 'shortOffset',
+      }).formatToParts(new Date(tRaw)).find(p => p.type === 'timeZoneName').value.replace('GMT', '');
+      const localDate = new Date(`${tRaw}:00${vanOffset}`);
       const body = {
         t: localDate.toISOString(),
         v,
