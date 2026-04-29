@@ -272,6 +272,17 @@
 
     // ── Observations: render list ────────────────────────────────────────────
     let allObservations = [];
+    let gaugeSeries = { fitz: [], ashlu: [], elaho: [] };
+
+    function closestDischarge(series, targetMs) {
+      if (!series.length) return null;
+      let best = null, bestDiff = Infinity;
+      for (const pt of series) {
+        const diff = Math.abs(pt.x.getTime() - targetMs);
+        if (diff < bestDiff) { bestDiff = diff; best = pt.y; }
+      }
+      return bestDiff <= 2 * 60 * 60 * 1000 ? best : null;  // null if >2h away
+    }
 
     function renderObsList() {
       const el = document.getElementById('obs-list');
@@ -297,11 +308,11 @@
 
     // ── Observations: export CSV ─────────────────────────────────────────────
     function exportCSV() {
-      const lines = ['timestamp_utc,level_m,paddler,note'];
+      const lines = ['timestamp_utc,level_m,fitz_m3s,ashlu_m3s,elaho_m3s,paddler,note'];
       allObservations.forEach(o => {
         const note    = (o.note    ?? '').replace(/"/g, '""');
         const paddler = (o.paddler ?? '').replace(/"/g, '""');
-        lines.push(`${o.ts.toISOString()},${o.level},"${paddler}","${note}"`);
+        lines.push(`${o.ts.toISOString()},${o.level},${o.fitz ?? ''},${o.ashlu ?? ''},${o.elaho ?? ''},"${paddler}","${note}"`);
       });
       const blob = new Blob([lines.join('\n')], { type: 'text/csv' });
       const url  = URL.createObjectURL(blob);
@@ -346,11 +357,15 @@
       const vget = t => vp.find(p => p.type === t).value;
       const vanOffsetMs = approx - new Date(`${vget('year')}-${vget('month')}-${vget('day')}T${vget('hour')}:${vget('minute')}:${vget('second')}Z`);
       const localDate = new Date(approx.getTime() + vanOffsetMs);
+      const obsMs = localDate.getTime();
       const body = {
         t: localDate.toISOString(),
         v,
         note:    form.elements.note.value.trim()    || undefined,
         paddler: form.elements.paddler.value.trim() || undefined,
+        fitz:  closestDischarge(gaugeSeries.fitz,  obsMs) ?? undefined,
+        ashlu: closestDischarge(gaugeSeries.ashlu, obsMs) ?? undefined,
+        elaho: closestDischarge(gaugeSeries.elaho, obsMs) ?? undefined,
       };
 
       try {
@@ -368,6 +383,9 @@
           level:   data.observation.v,
           note:    data.observation.note    ?? null,
           paddler: data.observation.paddler ?? null,
+          fitz:    data.observation.fitz    ?? null,
+          ashlu:   data.observation.ashlu   ?? null,
+          elaho:   data.observation.elaho   ?? null,
         };
         allObservations.push(newObs);
         allObservations.sort((a, b) => a.ts - b.ts);
@@ -429,6 +447,7 @@ setCalCard('cal-ashlu-value', 'level-badge-ashlu', latestAshluStage);
 
         combinedChart = buildCombinedChart(fitzCalSeries, ashluCalSeries, elahoCalSeries, observationSeries);
 
+        gaugeSeries = { fitz: fitzSeries, ashlu: ashluSeries, elaho: elahoSeries };
         allObservations = observations;
         renderObsList();
 

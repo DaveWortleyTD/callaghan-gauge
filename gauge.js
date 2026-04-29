@@ -71,6 +71,9 @@ async function fetchObservations() {
       level:   p.v,
       note:    p.note    ?? null,
       paddler: p.paddler ?? null,
+      fitz:    p.fitz    ?? null,
+      ashlu:   p.ashlu   ?? null,
+      elaho:   p.elaho   ?? null,
     }));
   } catch {
     return [];
@@ -122,12 +125,16 @@ export async function loadData() {
   const latestElaho      = elahoPoints[elahoPoints.length - 1] ?? null;
   const latestElahoStage = latestElaho ? estimateFromElaho(latestElaho.discharge) : null;
 
-  const observationSeries = observations.map(p => ({
-    x:       p.ts,
-    y:       p.level,
-    note:    p.note,
-    paddler: p.paddler,
-  }));
+  const cutoff = new Date(Date.now() - 48 * 60 * 60 * 1000);
+
+  const observationSeries = observations
+    .filter(p => p.ts >= cutoff)
+    .map(p => ({
+      x:       p.ts,
+      y:       p.level,
+      note:    p.note,
+      paddler: p.paddler,
+    }));
 
   return {
     fitzSeries, fitzCalSeries,

@@ -43,7 +43,7 @@ export default {
       return json({ error: 'Invalid JSON' }, 400);
     }
 
-    const { t, v, note, paddler } = body;
+    const { t, v, note, paddler, fitz, ashlu, elaho } = body;
 
     // ── Validate level ───────────────────────────────────────────────────────
     const level = parseFloat(v);
@@ -65,6 +65,9 @@ export default {
     const obs = { t: ts.toISOString(), v: Math.round(level * 1000) / 1000 };
     if (note    && typeof note    === 'string' && note.trim())    obs.note    = note.trim().slice(0, 300);
     if (paddler && typeof paddler === 'string' && paddler.trim()) obs.paddler = paddler.trim().slice(0, 60);
+    if (fitz  != null && isFinite(fitz))  obs.fitz  = Math.round(fitz  * 100) / 100;
+    if (ashlu != null && isFinite(ashlu)) obs.ashlu = Math.round(ashlu * 10)  / 10;
+    if (elaho != null && isFinite(elaho)) obs.elaho = Math.round(elaho * 10)  / 10;
 
     // ── Read current file from GitHub ────────────────────────────────────────
     const ghHeaders = {
