@@ -14,9 +14,71 @@ const API_URL  = `https://api.github.com/repos/${REPO}/contents/${FILE}`;
 
 const CORS = {
   'Access-Control-Allow-Origin':  '*',
-  'Access-Control-Allow-Methods': 'POST, OPTIONS',
+  'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
   'Access-Control-Allow-Headers': 'Content-Type',
 };
+
+// Regression model constants (kept in sync with gauge.js)
+const ASHLU_INTERCEPT     = 0.1778;
+const ASHLU_COEF          = 0.005735;
+const ASHLU_MIN_DISCHARGE = 2.6;
+
+const ELAHO_INTERCEPT     = -0.0384;
+const ELAHO_COEF          = 0.00191132;
+const ELAHO_MIN_DISCHARGE = 67.3;
+
+const ASHLU_DATA_URL = `https://raw.githubusercontent.com/${REPO}/main/ashlu-data.json`;
+
+function ecccRealtimeURL(station) {
+  const now   = new Date();
+  const start = new Date(now - 3 * 60 * 60 * 1000).toISOString(); // last 3 hours is plenty
+  const end   = now.toISOString();
+  return `https://api.weather.gc.ca/collections/hydrometric-realtime/items?STATION_NUMBER=${station}&datetime=${start}/${end}&limit=10&sortby=-DATETIME`;
+}
+
+function estimateFromAshlu(q) {
+  return q >= ASHLU_MIN_DISCHARGE ? Math.round((ASHLU_INTERCEPT + ASHLU_COEF * q) * 1000) / 1000 : null;
+}
+
+function isAshluExcluded(date) {
+  const month = date.getMonth(); // 0-indexed: 4=May, 7=Aug, 8=Sep
+  const day   = date.getDay();   // 0=Sun, 6=Sat
+  return (month === 4 || month === 7 || month === 8) && (day === 0 || day === 6);
+}
+
+function estimateFromElaho(q) {
+  return q >= ELAHO_MIN_DISCHARGE ? Math.round((ELAHO_INTERCEPT + ELAHO_COEF * q) * 1000) / 1000 : null;
+}
+
+async function handleEstimate() {
+  const [ashluResp, elahoResp] = await Promise.allSettled([
+    fetch(ASHLU_DATA_URL),
+    fetch(ecccRealtimeURL('08GA071')),
+  ]);
+
+  let ashlu = null;
+  if (ashluResp.status === 'fulfilled' && ashluResp.value.ok) {
+    const data = await ashluResp.value.json();
+    const latest = (data.history ?? []).at(-1);
+    if (latest && !isAshluExcluded(new Date(latest.t))) {
+      ashlu = { discharge: latest.v, timestamp: latest.t, estimate: estimateFromAshlu(latest.v) };
+    }
+  }
+
+  let elaho = null;
+  if (elahoResp.status === 'fulfilled' && elahoResp.value.ok) {
+    const geojson = await elahoResp.value.json();
+    const feature = (geojson.features ?? []).find(f => f.properties.DISCHARGE !== null);
+    if (feature) {
+      const q = feature.properties.DISCHARGE;
+      elaho = { discharge: q, timestamp: feature.properties.DATETIME, estimate: estimateFromElaho(q) };
+    }
+  }
+
+  const average_estimate = elaho?.estimate ?? null;
+
+  return json({ ashlu, elaho, average_estimate, retrieved_at: new Date().toISOString() });
+}
 
 function json(body, status = 200) {
   return new Response(JSON.stringify(body), {
@@ -29,6 +91,13 @@ export default {
   async fetch(request, env) {
     if (request.method === 'OPTIONS') {
       return new Response(null, { headers: CORS });
+    }
+
+    const path = new URL(request.url).pathname;
+
+    if (path === '/estimate') {
+      if (request.method !== 'GET') return json({ error: 'Method not allowed' }, 405);
+      return handleEstimate();
     }
 
     if (request.method !== 'POST') {

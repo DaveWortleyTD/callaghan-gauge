@@ -80,6 +80,15 @@ async function fetchObservations() {
   }
 }
 
+// ── Ashlu exclusion ───────────────────────────────────────────────────────────
+// Ashlu is dam-controlled on May/August/September weekends, making it
+// unreliable as a Callaghan predictor on those dates.
+function isAshluExcluded(date) {
+  const month = date.getMonth(); // 0-indexed: 4=May, 7=Aug, 8=Sep
+  const day   = date.getDay();   // 0=Sun, 6=Sat
+  return (month === 4 || month === 7 || month === 8) && (day === 0 || day === 6);
+}
+
 // ── Regression ────────────────────────────────────────────────────────────────
 
 function estimateFromFitz(discharge) {
@@ -110,11 +119,13 @@ export async function loadData() {
   // Per-predictor series using {x, y} point format for Chart.js time axes
   const fitzSeries     = fitzPoints.map(p => ({ x: p.ts, y: p.discharge }));
   const fitzCalSeries  = fitzPoints.map(p => ({ x: p.ts, y: estimateFromFitz(p.discharge) }));
-  const ashluSeries    = ashluPoints.map(p => ({ x: p.ts, y: p.discharge }));
-  const ashluCalSeries = ashluPoints.map(p => ({ x: p.ts, y: estimateFromAshlu(p.discharge) }));
+
+  const filteredAshluPoints = ashluPoints.filter(p => !isAshluExcluded(p.ts));
+  const ashluSeries    = filteredAshluPoints.map(p => ({ x: p.ts, y: p.discharge }));
+  const ashluCalSeries = filteredAshluPoints.map(p => ({ x: p.ts, y: estimateFromAshlu(p.discharge) }));
 
   const latestFitz  = fitzPoints[fitzPoints.length - 1]  ?? null;
-  const latestAshlu = ashluPoints[ashluPoints.length - 1] ?? null;
+  const latestAshlu = filteredAshluPoints[filteredAshluPoints.length - 1] ?? null;
 
   const latestFitzStage  = latestFitz  ? estimateFromFitz(latestFitz.discharge)   : null;
   const latestAshluStage = latestAshlu ? estimateFromAshlu(latestAshlu.discharge) : null;

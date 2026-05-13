@@ -46,8 +46,12 @@
       <form id="obs-form" novalidate>
         <div class="obs-fields">
           <div class="obs-field">
-            <label for="obs-t">Date &amp; time (Vancouver)</label>
-            <input type="datetime-local" id="obs-t" name="t" step="900" required />
+            <label for="obs-date">Date (Vancouver)</label>
+            <input type="date" id="obs-date" name="date" required />
+          </div>
+          <div class="obs-field">
+            <label for="obs-time">Time (Vancouver)</label>
+            <select id="obs-time" name="time" required></select>
           </div>
           <div class="obs-field">
             <label for="obs-v">Callaghan gauge level (m)</label>
@@ -260,7 +264,7 @@
 
     // ── Observations: datetime input helper ─────────────────────────────────
     function localDatetimeValue(date = new Date()) {
-      const rounded = new Date(Math.round(date.getTime() / (15 * 60 * 1000)) * (15 * 60 * 1000));
+      const rounded = new Date(Math.round(date.getTime() / (5 * 60 * 1000)) * (5 * 60 * 1000));
       const parts = new Intl.DateTimeFormat('en-CA', {
         timeZone: 'America/Vancouver',
         year: 'numeric', month: '2-digit', day: '2-digit',
@@ -268,6 +272,35 @@
       }).formatToParts(rounded);
       const get = type => parts.find(p => p.type === type).value;
       return `${get('year')}-${get('month')}-${get('day')}T${get('hour')}:${get('minute')}`;
+    }
+
+    function nowVancouverString() {
+      const parts = new Intl.DateTimeFormat('en-CA', {
+        timeZone: 'America/Vancouver',
+        year: 'numeric', month: '2-digit', day: '2-digit',
+        hour: '2-digit', minute: '2-digit', hour12: false,
+      }).formatToParts(new Date());
+      const get = type => parts.find(p => p.type === type).value;
+      return `${get('year')}-${get('month')}-${get('day')}T${get('hour')}:${get('minute')}`;
+    }
+
+    function buildTimeOptions(selectEl) {
+      for (let h = 0; h < 24; h++) {
+        for (let m = 0; m < 60; m += 5) {
+          const hh  = String(h).padStart(2, '0');
+          const mm  = String(m).padStart(2, '0');
+          const opt = document.createElement('option');
+          opt.value       = `${hh}:${mm}`;
+          opt.textContent = `${hh}:${mm}`;
+          selectEl.appendChild(opt);
+        }
+      }
+    }
+
+    function setDateTimeInputs(datetimeStr) {
+      const [date, time] = datetimeStr.split('T');
+      document.getElementById('obs-date').value = date;
+      document.getElementById('obs-time').value = time;
     }
 
     // ── Observations: render list ────────────────────────────────────────────
@@ -333,9 +366,9 @@
       const btn    = document.getElementById('obs-submit');
       const status = document.getElementById('obs-status');
 
-      const tRaw = form.elements.t.value;
+      const tRaw = `${form.elements.date.value}T${form.elements.time.value}`;
       const v    = parseFloat(form.elements.v.value);
-      if (!tRaw || isNaN(v)) {
+      if (!form.elements.date.value || !form.elements.time.value || isNaN(v)) {
         status.textContent = 'Please fill in the date/time and level.';
         status.className   = 'obs-status-error';
         return;
@@ -357,6 +390,14 @@
       const vget = t => vp.find(p => p.type === t).value;
       const vanOffsetMs = approx - new Date(`${vget('year')}-${vget('month')}-${vget('day')}T${vget('hour')}:${vget('minute')}:${vget('second')}Z`);
       const localDate = new Date(approx.getTime() + vanOffsetMs);
+      if (localDate > new Date()) {
+        status.textContent = 'Date/time cannot be in the future.';
+        status.className   = 'obs-status-error';
+        btn.disabled    = false;
+        btn.textContent = 'Submit observation';
+        return;
+      }
+
       const obsMs = localDate.getTime();
       const body = {
         t: localDate.toISOString(),
@@ -402,7 +443,7 @@
         status.textContent = 'Observation saved — thanks!';
         status.className   = 'obs-status-ok';
         form.reset();
-        document.getElementById('obs-t').value = localDatetimeValue();
+        setDateTimeInputs(localDatetimeValue());
 
       } catch (err) {
         status.textContent = `Error: ${err.message}`;
@@ -415,8 +456,15 @@
 
     // ── Bootstrap ───────────────────────────────────────────────────────────
     async function init() {
-      // Pre-fill datetime input with current Vancouver time
-      document.getElementById('obs-t').value = localDatetimeValue();
+      // Build time select options and pre-fill both inputs with current Vancouver time
+      const obsDateInput = document.getElementById('obs-date');
+      const obsTimeInput = document.getElementById('obs-time');
+      buildTimeOptions(obsTimeInput);
+      setDateTimeInputs(localDatetimeValue());
+      obsDateInput.max = nowVancouverString().split('T')[0];
+      obsDateInput.addEventListener('focus', () => {
+        obsDateInput.max = nowVancouverString().split('T')[0];
+      });
       document.getElementById('obs-form').addEventListener('submit', submitObservation);
       document.getElementById('obs-export').addEventListener('click', exportCSV);
       document.getElementById('obs-list-wrap').style.display = 'none';
