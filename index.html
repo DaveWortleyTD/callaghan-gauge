@@ -304,6 +304,15 @@
     }
 
     // ── Observations: render list ────────────────────────────────────────────
+    function escHtml(s) {
+      return String(s)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    }
+
     let allObservations = [];
     let gaugeSeries = { fitz: [], ashlu: [], elaho: [] };
 
@@ -327,8 +336,8 @@
       wrap.style.display = '';
       const rows = [...allObservations].reverse().map(o => {
         const info = levelInfo(o.level);
-        const note    = o.note    ? `<span class="obs-note">${o.note}</span>`       : '';
-        const paddler = o.paddler ? `<span class="obs-paddler">${o.paddler}</span>` : '';
+        const note    = o.note    ? `<span class="obs-note">${escHtml(o.note)}</span>`       : '';
+        const paddler = o.paddler ? `<span class="obs-paddler">${escHtml(o.paddler)}</span>` : '';
         return `<div class="obs-row">
           <span class="obs-time">${fmtTime(o.ts)}</span>
           <span class="obs-level">${o.level.toFixed(2)} m</span>
@@ -501,7 +510,7 @@ setCalCard('cal-ashlu-value', 'level-badge-ashlu', latestAshluStage);
 
       } catch (err) {
         document.getElementById('error-area').innerHTML =
-          `<div class="error-msg">Could not load gauge data: ${err.message}. Try refreshing in a moment.</div>`;
+          `<div class="error-msg">Could not load gauge data: ${escHtml(err.message)}. Try refreshing in a moment.</div>`;
         console.error(err);
       }
     }
